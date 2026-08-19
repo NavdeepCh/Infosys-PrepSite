@@ -1,0 +1,1833 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infosys 2026 Campus Coding Assessment Explorer & Dynamic AI Prep Assistant</title>
+
+    <!-- Firebase CDN Dependencies (Compat Version 9.23.0) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Font Awesome CDN for UI Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        infoblue: '#007cc3',
+                        infodark: '#002d62',
+                        amberlight: '#fef3c7',
+                        slatebg: '#f8fafc',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 340px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 380px;
+            }
+        }
+        .modal-scroll::-webkit-scrollbar, .chat-scroll::-webkit-scrollbar, .updates-scroll::-webkit-scrollbar {
+            width: 5px;
+        }
+        .modal-scroll::-webkit-scrollbar-thumb, .chat-scroll::-webkit-scrollbar-thumb, .updates-scroll::-webkit-scrollbar-thumb {
+            background-color: #0284c7;
+            border-radius: 4px;
+        }
+        .chat-drawer {
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+        }
+        pre code {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 0.75rem;
+        }
+        .flashcard {
+            perspective: 1000px;
+        }
+        .flashcard-inner {
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .flashcard.flipped .flashcard-inner {
+            transform: rotateY(180deg);
+        }
+
+        /* High Performance Pure CSS 60fps Spinning Ring Loaders */
+        @keyframes app-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .spin-ring {
+            display: inline-block;
+            border-radius: 50%;
+            animation: app-spin 0.75s linear infinite;
+            box-sizing: border-box;
+            flex-shrink: 0;
+        }
+        .spin-purple { border: 3px solid rgba(147, 51, 234, 0.2); border-top-color: #9333ea; }
+        .spin-emerald { border: 3px solid rgba(16, 185, 129, 0.2); border-top-color: #10b981; }
+        .spin-indigo { border: 3px solid rgba(79, 70, 229, 0.2); border-top-color: #4f46e5; }
+
+        /* Latest Updates Popup Widget Custom Styling */
+        .new-starburst {
+            background: #84cc16;
+            color: #052e16;
+            font-weight: 900;
+            font-size: 9px;
+            padding: 2px 5px;
+            border-radius: 3px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            border: 1px dashed #ffffff;
+            animation: pulse-star 1.5s infinite alternate;
+        }
+        @keyframes pulse-star {
+            0% { transform: scale(1) rotate(-3deg); }
+            100% { transform: scale(1.1) rotate(3deg); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col relative pb-12">
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed top-20 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Auth / Registration Number Modal (Unclosable when logged out) -->
+    <div id="authModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-5" onclick="event.stopPropagation()">
+            <div class="text-center space-y-2">
+                <div class="inline-flex bg-blue-600 text-white p-3 rounded-xl font-black text-2xl tracking-widest shadow-md">INFOSYS</div>
+                <h2 class="text-xl font-bold text-slate-900">Campus Placement Portal 2026</h2>
+                <p class="text-xs text-slate-500">Sign in or create your candidate profile using your 10-character College Registration Number.</p>
+            </div>
+
+            <!-- Auth Mode Switcher Tabs -->
+            <div class="flex border-b border-slate-200 text-xs font-bold text-center">
+                <button id="authTabSignIn" onclick="switchAuthTab('signin')" class="flex-1 py-2.5 border-b-2 border-blue-600 text-blue-600 transition">
+                    <i class="fa-solid fa-right-to-bracket mr-1"></i> Sign In
+                </button>
+                <button id="authTabSignUp" onclick="switchAuthTab('signup')" class="flex-1 py-2.5 text-slate-500 hover:text-slate-800 transition">
+                    <i class="fa-solid fa-user-plus mr-1"></i> Sign Up
+                </button>
+            </div>
+
+            <!-- Sign In View -->
+            <form id="signInForm" onsubmit="handleSignIn(event)" class="space-y-4 text-xs">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">10-Character Registration Number</label>
+                    <input type="text" id="signInRegNo" maxlength="10" placeholder="e.g. 22A91A0501" required class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-slate-800 font-mono uppercase focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <p class="text-[10px] text-slate-400 mt-1">Alphanumeric, case-insensitive (e.g., 22A91A0501)</p>
+                </div>
+                
+                <div id="signInError" class="hidden p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs leading-relaxed space-y-2 shadow-sm">
+                    <div class="flex items-start gap-2">
+                        <i class="fa-solid fa-user-slash text-amber-600 text-sm mt-0.5 shrink-0"></i>
+                        <span id="signInErrorText">Registration number not registered in the system.</span>
+                    </div>
+                    <button type="button" onclick="redirectToSignUp()" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-1.5 px-3 rounded-lg text-xs transition flex items-center justify-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-user-plus"></i>
+                        <span>Click Here to Sign Up Now</span>
+                    </button>
+                </div>
+
+                <button type="submit" id="signInSubmitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg transition shadow flex items-center justify-center gap-2">
+                    <span>Sign In & Restore Profile</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </form>
+
+            <!-- Sign Up View -->
+            <form id="signUpForm" onsubmit="handleSignUp(event)" class="space-y-3 text-xs hidden">
+                <div class="bg-blue-50 border border-blue-200 p-2.5 rounded-lg text-[11px] text-blue-900 font-medium">
+                    <i class="fa-solid fa-info-circle text-blue-600 mr-1"></i> Creating a new account initializes your personalized assessment tracker and Cloud sync.
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Registration Number (10 Chars)</label>
+                    <input type="text" id="signUpRegNo" maxlength="10" placeholder="e.g. 22A91A0501" required class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800 font-mono uppercase focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Candidate Full Name</label>
+                    <input type="text" id="signUpName" placeholder="e.g. Rahul Sharma" required class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">College Name</label>
+                    <input type="text" id="signUpCollege" placeholder="e.g. Raghu Engineering College" required class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Degree & Branch</label>
+                        <input type="text" id="signUpBranch" placeholder="e.g. B.Tech - CSE" required class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Graduation Batch</label>
+                        <select id="signUpGradYear" required class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none font-semibold">
+                            <option value="2026">2026</option>
+                            <option value="2025">2025</option>
+                            <option value="2027">2027</option>
+                            <option value="2028">2028</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="signUpError" class="hidden p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs leading-relaxed"></div>
+                <button type="submit" id="signUpSubmitBtn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg transition shadow flex items-center justify-center gap-2">
+                    <span>Create Account & Start</span>
+                    <i class="fa-solid fa-user-check"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <header class="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <!-- Left Brand & Title -->
+                <div class="flex items-center space-x-3 shrink-0">
+                    <div class="bg-blue-600 text-white px-3 py-1.5 rounded-xl font-black text-xl tracking-wider shadow-sm">INFOSYS</div>
+                    <div class="hidden sm:block">
+                        <h1 class="text-base font-bold text-slate-900 leading-tight">2026 Coding Intelligence</h1>
+                        <p class="text-xs text-slate-500"><span id="headerTotalCount">105</span> Empirical Questions</p>
+                    </div>
+                </div>
+
+                <!-- Navigation Links & Action Controls -->
+                <div class="flex items-center space-x-3">
+                    <nav class="hidden lg:flex space-x-5 text-xs font-semibold text-slate-600">
+                        <a href="#overview" class="hover:text-blue-600 transition">Overview</a>
+                        <a href="#tracks" class="hover:text-blue-600 transition">Hiring Tracks</a>
+                        <a href="#analytics" class="hover:text-blue-600 transition">Analytics</a>
+                        <a href="#questions" class="hover:text-blue-600 transition">Problem Bank</a>
+                        <a href="#interview" class="hover:text-blue-600 transition">CS Core</a>
+                    </nav>
+
+                    <!-- Compact Help & Tutorial ? Button -->
+                    <button id="tourHelpBtn" onclick="startInteractiveTour(true)" title="Website Guide & Feature Tour" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-600 font-bold flex items-center justify-center transition border border-slate-200 text-xs shrink-0 shadow-sm" aria-label="Website Tutorial">
+                        <i class="fa-solid fa-question text-xs"></i>
+                    </button>
+
+                    <!-- AI Tools Hub Dropdown Menu -->
+                    <div id="tourAiToolsHub" class="relative group">
+                        <button class="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-wand-magic-sparkles text-blue-600"></i>
+                            <span>AI Tools Hub</span>
+                            <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                        </button>
+                        <div class="absolute right-0 mt-1 w-56 bg-white rounded-2xl shadow-xl border border-slate-200 py-2 hidden group-hover:block z-50">
+                            <button onclick="openQuizieModal()" class="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-cyan-600 flex items-center gap-2">
+                                <i class="fa-solid fa-gamepad text-cyan-600 w-4"></i> Quizie Engine
+                            </button>
+                            <button onclick="openResumeMatcherModal()" class="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-teal-600 flex items-center gap-2">
+                                <i class="fa-solid fa-file-user text-teal-600 w-4"></i> Resume Matcher
+                            </button>
+                            <button onclick="openContestModal()" class="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-rose-600 flex items-center gap-2">
+                                <i class="fa-solid fa-stopwatch text-rose-600 w-4"></i> Exam Simulator
+                            </button>
+                            <button onclick="openFlashcardsModal()" class="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-amber-600 flex items-center gap-2">
+                                <i class="fa-solid fa-layer-group text-amber-600 w-4"></i> CS Flashcards
+                            </button>
+                            <button onclick="openStudyPlanModal()" class="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-purple-600 flex items-center gap-2">
+                                <i class="fa-solid fa-wand-magic-sparkles text-purple-600 w-4"></i> AI Study Plan
+                            </button>
+                            <button onclick="openInterviewModal()" class="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-indigo-600 flex items-center gap-2">
+                                <i class="fa-solid fa-comments text-indigo-600 w-4"></i> 1:1 AI Interview
+                            </button>
+                            <button onclick="openLiveSearchModal()" class="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-emerald-600 flex items-center gap-2">
+                                <i class="fa-solid fa-earth-americas text-emerald-600 w-4"></i> Live Intel
+                            </button>
+                            <div class="border-t border-slate-100 my-1"></div>
+                            <button onclick="openApiKeyModal()" class="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-amber-600 flex items-center gap-2">
+                                <i class="fa-solid fa-key text-amber-500 w-4"></i> Gemini API Key
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Candidate User Badge -->
+                    <div id="userProfileBadge" class="hidden flex items-center gap-2 bg-slate-100 border border-slate-200 text-slate-800 text-xs px-2.5 py-1.5 rounded-xl">
+                        <i class="fa-solid fa-id-card text-blue-600"></i>
+                        <span id="navUserRegNo" class="font-mono font-bold">--</span>
+                        <button onclick="signOutCandidate()" title="Switch candidate profile" class="text-slate-400 hover:text-rose-600 text-xs ml-1 transition">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                        </button>
+                    </div>
+
+                    <!-- Solved Count Badge -->
+                    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 shrink-0">
+                        <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                        <span id="navProgressCount">0 Solved</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-10">
+
+        <!-- Hero Overview Section -->
+        <section id="overview" class="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 rounded-2xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
+                
+                <!-- Left 7 Columns: Title, Overview & Progress -->
+                <div class="lg:col-span-7 space-y-5">
+                    <span class="inline-block bg-blue-500/20 text-blue-300 border border-blue-400/30 text-xs px-3 py-1 rounded-full uppercase font-semibold tracking-wider">Empirical Campus Analysis 2026 Batch</span>
+                    <h2 class="text-2xl sm:text-4xl font-extrabold tracking-tight">Infosys Campus Coding Assessment Taxonomy</h2>
+                    <p class="text-slate-300 text-sm sm:text-base leading-relaxed">
+                        Comprehensive breakdown of coding problems, algorithmic patterns, platform constraints, and technical interview questions administered across Indian engineering campuses for the 2026 batch.
+                    </p>
+
+                    <!-- Preparation Progress Bar -->
+                    <div id="tourProgressBar" class="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs font-bold uppercase text-blue-300 tracking-wider">Your Preparation Tracker</span>
+                            <span id="progressPercentText" class="text-xs font-black text-emerald-400">0% Completed</span>
+                        </div>
+                        <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden border border-white/10">
+                            <div id="progressBarFill" class="bg-gradient-to-r from-blue-500 to-emerald-400 h-full w-0 transition-all duration-500"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right 5 Columns: AI Preparation Accelerators Quick Launch Panel -->
+                <div class="lg:col-span-5 bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-md space-y-4">
+                    <div class="flex justify-between items-center border-b border-white/10 pb-3">
+                        <h3 class="text-sm font-extrabold uppercase tracking-wider text-blue-300 flex items-center gap-2">
+                            <i class="fa-solid fa-bolt text-amber-400"></i> AI Preparation Accelerators
+                        </h3>
+                        <span class="text-[10px] bg-blue-500/30 text-blue-200 border border-blue-400/30 px-2 py-0.5 rounded font-mono">2026 BATCH</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2.5 text-xs">
+                        <button onclick="openQuizieModal()" class="bg-white/10 hover:bg-white/20 border border-white/10 p-2.5 rounded-xl text-left transition flex items-center gap-2 text-slate-200">
+                            <i class="fa-solid fa-gamepad text-cyan-400 text-base"></i>
+                            <div>
+                                <p class="font-bold">Quizie Engine</p>
+                                <p class="text-[10px] text-slate-400">CS & DSA Quizzes</p>
+                            </div>
+                        </button>
+                        <button onclick="openInterviewModal()" class="bg-white/10 hover:bg-white/20 border border-white/10 p-2.5 rounded-xl text-left transition flex items-center gap-2 text-slate-200">
+                            <i class="fa-solid fa-comments text-indigo-400 text-base"></i>
+                            <div>
+                                <p class="font-bold">1:1 AI Interview</p>
+                                <p class="text-[10px] text-slate-400">Mock Defense</p>
+                            </div>
+                        </button>
+                        <button onclick="openContestModal()" class="bg-white/10 hover:bg-white/20 border border-white/10 p-2.5 rounded-xl text-left transition flex items-center gap-2 text-slate-200">
+                            <i class="fa-solid fa-stopwatch text-rose-400 text-base"></i>
+                            <div>
+                                <p class="font-bold">Exam Simulator</p>
+                                <p class="text-[10px] text-slate-400">Timed OA Practice</p>
+                            </div>
+                        </button>
+                        <button onclick="openResumeMatcherModal()" class="bg-white/10 hover:bg-white/20 border border-white/10 p-2.5 rounded-xl text-left transition flex items-center gap-2 text-slate-200">
+                            <i class="fa-solid fa-file-user text-teal-400 text-base"></i>
+                            <div>
+                                <p class="font-bold">Resume Matcher</p>
+                                <p class="text-[10px] text-slate-400">Role Fit Analyzer</p>
+                            </div>
+                        </button>
+                        <button onclick="openFlashcardsModal()" class="bg-white/10 hover:bg-white/20 border border-white/10 p-2.5 rounded-xl text-left transition flex items-center gap-2 text-slate-200">
+                            <i class="fa-solid fa-layer-group text-amber-400 text-base"></i>
+                            <div>
+                                <p class="font-bold">CS Flashcards</p>
+                                <p class="text-[10px] text-slate-400">High-Yield Revisions</p>
+                            </div>
+                        </button>
+                        <button onclick="openLiveSearchModal()" class="bg-white/10 hover:bg-white/20 border border-white/10 p-2.5 rounded-xl text-left transition flex items-center gap-2 text-slate-200">
+                            <i class="fa-solid fa-earth-americas text-emerald-400 text-base"></i>
+                            <div>
+                                <p class="font-bold">Live Campus Intel</p>
+                                <p class="text-[10px] text-slate-400">Search Drive Web</p>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Key Metrics Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 mt-6 border-t border-slate-700/60 relative z-10">
+                <div class="bg-white/5 p-4 rounded-xl border border-white/10 backdrop-blur-sm">
+                    <p class="text-xs text-slate-400 font-medium uppercase">Cataloged Problems</p>
+                    <p id="heroCatalogCount" class="text-3xl font-black text-blue-400 mt-1">105</p>
+                    <p class="text-xs text-slate-400 mt-1">LeetCode, GFG, CodeChef, HackerRank</p>
+                </div>
+                <div class="bg-white/5 p-4 rounded-xl border border-white/10 backdrop-blur-sm">
+                    <p class="text-xs text-slate-400 font-medium uppercase">Hiring Tracks</p>
+                    <p class="text-3xl font-black text-emerald-400 mt-1">3</p>
+                    <p class="text-xs text-slate-400 mt-1">SE, DSE, SP / HackWithInfy</p>
+                </div>
+                <div class="bg-white/5 p-4 rounded-xl border border-white/10 backdrop-blur-sm">
+                    <p class="text-xs text-slate-400 font-medium uppercase">Compensation Tier</p>
+                    <p class="text-3xl font-black text-amber-400 mt-1">₹3.6 - 21L</p>
+                    <p class="text-xs text-slate-400 mt-1">LPA across roles</p>
+                </div>
+                <div class="bg-white/5 p-4 rounded-xl border border-white/10 backdrop-blur-sm cursor-pointer hover:bg-white/10 transition" onclick="openApiKeyModal()">
+                    <p class="text-xs text-slate-400 font-medium uppercase">Gemini AI Engine</p>
+                    <p id="heroAiStatusText" class="text-2xl font-black text-purple-400 mt-1">Direct API</p>
+                    <p class="text-xs text-slate-400 mt-1">Click to Configure Key</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="tracks" class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+            <div class="mb-6">
+                <h3 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-sitemap text-blue-600"></i> Assessment Structure & Hiring Tracks
+                </h3>
+                <p class="text-slate-600 text-sm mt-1">
+                    Operational architecture of Infosys campus evaluations for the 2026 batch, detailing scoring weights, test durations, and target complexity.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Systems Engineer -->
+                <div class="border border-slate-200 rounded-xl p-5 bg-slate-50 hover:border-blue-300 transition flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded">Foundational Track</span>
+                            <span class="text-xs font-semibold text-slate-500">90 Mins</span>
+                        </div>
+                        <h4 class="text-lg font-bold text-slate-900">Systems Engineer (SE)</h4>
+                        <p class="text-sm text-emerald-600 font-semibold mb-4">₹3.60 – ₹4.00 LPA</p>
+                        <ul class="text-xs text-slate-600 space-y-2 mb-4">
+                            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-blue-500 mt-0.5"></i> <span><strong>Structure:</strong> 2 Coding Problems + Aptitude</span></li>
+                            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-blue-500 mt-0.5"></i> <span><strong>Weight:</strong> 40% Aptitude + 60% Coding</span></li>
+                            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-blue-500 mt-0.5"></i> <span><strong>Domains:</strong> Basic Arrays, Strings, Elementary Math</span></li>
+                        </ul>
+                    </div>
+                    <div class="pt-3 border-t border-slate-200 text-xs text-slate-500">
+                        <span class="font-semibold text-slate-700">Benchmark:</span> Solving 1 problem fully guarantees SE consideration.
+                    </div>
+                </div>
+
+                <!-- Digital Specialist Engineer -->
+                <div class="border-2 border-blue-400 rounded-xl p-5 bg-blue-50/30 hover:border-blue-500 transition relative flex flex-col justify-between">
+                    <div class="absolute -top-3 right-4 bg-blue-600 text-white text-[10px] uppercase font-extrabold px-2 py-0.5 rounded shadow">Most Popular</div>
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <span class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2.5 py-1 rounded">Intermediate Track</span>
+                            <span class="text-xs font-semibold text-slate-500">3 Hours</span>
+                        </div>
+                        <h4 class="text-lg font-bold text-slate-900">Digital Specialist Engineer (DSE)</h4>
+                        <p class="text-sm text-emerald-600 font-semibold mb-4">~₹6.25 LPA</p>
+                        <ul class="text-xs text-slate-600 space-y-2 mb-4">
+                            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-blue-500 mt-0.5"></i> <span><strong>Structure:</strong> 3 Coding Problems (Easy, Medium, Hard)</span></li>
+                            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-blue-500 mt-0.5"></i> <span><strong>Marks:</strong> Q1 (20m), Q2 (30m), Q3 (50m)</span></li>
+                            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-blue-500 mt-0.5"></i> <span><strong>Domains:</strong> Two Pointers, Sliding Window, Greedy, 1D DP</span></li>
+                        </ul>
+                    </div>
+                    <div class="pt-3 border-t border-slate-200 text-xs text-slate-500">
+                        <span class="font-semibold text-slate-700">Benchmark:</span> Solving Q1 + Q2 fully qualifies candidates for DSE profile.
+                    </div>
+                </div>
+
+                <!-- Specialist Programmer -->
+                <div class="border border-purple-200 rounded-xl p-5 bg-purple-50/20 hover:border-purple-400 transition flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <span class="bg-purple-100 text-purple-800 text-xs font-bold px-2.5 py-1 rounded">Advanced Track</span>
+                            <span class="text-xs font-semibold text-slate-500">3 Hours</span>
+                        </div>
+                        <h4 class="text-lg font-bold text-slate-900">Specialist Programmer (SP / HackWithInfy)</h4>
+                        <p class="text-sm text-emerald-600 font-semibold mb-4">₹9.50 – ₹21.00 LPA</p>
+                        <ul class="text-xs text-slate-600 space-y-2 mb-4">
+                            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-purple-600 mt-0.5"></i> <span><strong>Structure:</strong> 3-4 Complex Algorithmic Challenges</span></li>
+                            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-purple-600 mt-0.5"></i> <span><strong>Domains:</strong> Multi-D DP, Segment Trees, Bitmasking, Graphs</span></li>
+                        </ul>
+                    </div>
+                    <div class="pt-3 border-t border-slate-200 text-xs text-slate-500">
+                        <span class="font-semibold text-slate-700">Benchmark:</span> Solving the third/fourth hard problem unlocks SP tier.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="analytics" class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+            <div class="mb-6">
+                <h3 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-column text-blue-600"></i> Empirical Algorithmic Pattern Frequency
+                </h3>
+                <p class="text-slate-600 text-sm mt-1">
+                    Based on statistical aggregation of candidate transcripts from 2025–2026 drives. Click any bar below to automatically filter the problem bank!
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                <div class="md:col-span-2">
+                    <div class="chart-container">
+                        <canvas id="topicChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-3">
+                    <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wider">Key Testing Insights</h4>
+                    <div class="text-xs text-slate-600 space-y-2 leading-relaxed">
+                        <p><strong class="text-slate-800">Array Dominance:</strong> Arrays & Hashing appear in over 53% of all questions.</p>
+                        <p><strong class="text-slate-800">DP Hurdle:</strong> Dynamic Programming represents 18% of problems, determining DSE (Q2) and SP (Q3) cutoffs.</p>
+                        <p><strong class="text-slate-800">Hidden Edge Cases:</strong> Assessment platforms enforce <span class="font-mono bg-slate-200 px-1 rounded text-slate-900 font-semibold">N &ge; 10^5</span>, modulo <span class="font-mono bg-slate-200 px-1 rounded text-slate-900 font-semibold">10^9+7</span> reductions, and 64-bit integer requirements.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="questions" class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 space-y-6">
+            <div>
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-code text-blue-600"></i> Exhaustive Problem Bank
+                        </h3>
+                        <p class="text-slate-600 text-sm mt-1">Search and filter coding questions asked in recent Infosys drives with verified links to LeetCode, GFG, CodeChef, and HackerRank.</p>
+                    </div>
+                    <span id="resultsCount" class="bg-blue-50 text-blue-700 text-xs font-bold px-3 py-1.5 rounded-full border border-blue-200 self-start sm:self-auto">Showing Questions</span>
+                </div>
+            </div>
+
+            <!-- Filter Controls -->
+            <div id="tourFilterSection" class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
+                <!-- Search Bar -->
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+                    <input type="text" id="searchInput" placeholder="Search by question title, concept, algorithm, or platform..." class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <!-- Filter Dropdowns -->
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Difficulty Tier</label>
+                        <select id="difficultyFilter" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-700 focus:ring-2 focus:ring-blue-500">
+                            <option value="ALL">All Difficulties</option>
+                            <option value="Easy">Easy Level</option>
+                            <option value="Medium">Medium Level</option>
+                            <option value="Hard">Hard Level</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Target Role Track</label>
+                        <select id="roleFilter" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-700 focus:ring-2 focus:ring-blue-500">
+                            <option value="ALL">All Roles</option>
+                            <option value="SE">Systems Engineer (SE)</option>
+                            <option value="DSE">Digital Specialist (DSE)</option>
+                            <option value="SP">Specialist Programmer (SP)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Algorithmic Category</label>
+                        <select id="topicFilter" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-700 focus:ring-2 focus:ring-blue-500">
+                            <option value="ALL">All Categories</option>
+                            <option value="Arrays & Hashing">Arrays & Hashing</option>
+                            <option value="Two Pointers & Sliding Window">Two Pointers & Sliding Window</option>
+                            <option value="Dynamic Programming">Dynamic Programming</option>
+                            <option value="Math & Number Theory">Math & Number Theory</option>
+                            <option value="Strings & Text Processing">Strings & Text Processing</option>
+                            <option value="Greedy & Searching">Greedy & Searching</option>
+                            <option value="Trees & Graphs">Trees & Graphs</option>
+                            <option value="Bit Manipulation & Tries">Bit Manipulation & Tries</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Practice Platform</label>
+                        <select id="platformFilter" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-700 focus:ring-2 focus:ring-blue-500">
+                            <option value="ALL">All Platforms</option>
+                            <option value="LeetCode">LeetCode</option>
+                            <option value="GeeksforGeeks">GeeksforGeeks</option>
+                            <option value="CodeChef">CodeChef</option>
+                            <option value="HackerRank">HackerRank</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div id="questionGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </section>
+
+        <section id="interview" class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+            <div class="mb-6 flex justify-between items-start flex-wrap gap-4">
+                <div>
+                    <h3 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                        <i class="fa-solid fa-graduation-cap text-blue-600"></i> Technical Verification & Core CS Interview Bank
+                    </h3>
+                    <p class="text-slate-600 text-sm mt-1">
+                        Explore frequent interview questions across Object-Oriented Programming, DBMS, Operating Systems, and Logic Puzzles.
+                    </p>
+                </div>
+                <button onclick="openQuizieModal()" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-gamepad text-sm"></i> Launch Interactive Quizie Engine
+                </button>
+            </div>
+
+            <div class="border-b border-slate-200 mb-6 flex space-x-4 overflow-x-auto text-sm font-medium">
+                <button class="cs-tab text-blue-600 border-b-2 border-blue-600 pb-2 px-1 font-semibold whitespace-nowrap" onclick="switchCsTab('oop', this)">Object-Oriented Programming</button>
+                <button class="cs-tab text-slate-500 hover:text-slate-700 pb-2 px-1 font-semibold whitespace-nowrap" onclick="switchCsTab('dbms', this)">DBMS & SQL</button>
+                <button class="cs-tab text-slate-500 hover:text-slate-700 pb-2 px-1 font-semibold whitespace-nowrap" onclick="switchCsTab('os', this)">Operating Systems & Concurrency</button>
+                <button class="cs-tab text-slate-500 hover:text-slate-700 pb-2 px-1 font-semibold whitespace-nowrap" onclick="switchCsTab('puzzles', this)">Logic & Applied Puzzles</button>
+            </div>
+
+            <div id="csTabContent" class="space-y-4 text-xs sm:text-sm"></div>
+        </section>
+
+    </main>
+
+    <footer class="bg-slate-900 text-slate-400 py-8 border-t border-slate-800 text-xs text-center mt-auto relative z-10">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="text-left">
+                <p class="font-bold text-white mb-1">Infosys 2026 Campus Recruitment Empirical Analysis & Dynamic AI Assistant</p>
+                <p class="text-slate-500 text-[11px]">Data synthesized from campus assessment transcripts across engineering colleges in India.</p>
+            </div>
+
+            <!-- Docked Recent Updates Container -->
+            <div id="dockedUpdateContainer" class="hidden bg-slate-800 border border-slate-700 rounded-xl p-2.5 px-4 text-left max-w-sm flex items-center gap-3 shadow-lg">
+                <div class="w-8 h-8 rounded-lg bg-blue-600/30 text-blue-400 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-bullhorn text-sm"></i>
+                </div>
+                <div class="flex-grow min-w-0">
+                    <span id="dockedUpdateCategory" class="text-[9px] font-extrabold uppercase font-mono px-1.5 py-0.2 bg-blue-900 text-blue-300 rounded">UPDATE</span>
+                    <h5 id="dockedUpdateTitle" class="text-xs font-bold text-white truncate">Docked Update</h5>
+                </div>
+                <button onclick="reopenUpdateBoxFromDock()" class="text-xs bg-blue-600 hover:bg-blue-500 text-white font-bold px-2.5 py-1 rounded-lg transition shrink-0">
+                    View
+                </button>
+            </div>
+        </div>
+    </footer>
+
+    <!-- REAL-TIME BOTTOM-RIGHT LATEST UPDATES POPUP CARD (MATCHING REFERENCE UI) -->
+    <div id="latestUpdatesCard" class="fixed bottom-6 right-6 z-50 w-96 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-2xl border-2 border-blue-600 hidden overflow-hidden transition-all duration-300">
+        <!-- Top Bright Blue Header Bar -->
+        <div class="bg-blue-600 text-white px-4 py-3 flex justify-between items-center shadow-md">
+            <h4 class="font-black text-sm uppercase tracking-wider flex items-center gap-2">
+                <i class="fa-solid fa-bell text-amber-300 text-base"></i>
+                <span>LATEST UPDATES</span>
+            </h4>
+            <button onclick="dismissLatestUpdatesBox()" class="bg-red-600 hover:bg-red-700 text-white text-xs font-black px-3 py-1 rounded shadow transition flex items-center gap-1">
+                <span>Close</span>
+            </button>
+        </div>
+
+        <!-- Sub Navigation Tabs (News / Events, Notices, Clubs) -->
+        <div class="flex border-b border-slate-200 bg-slate-100 text-xs font-extrabold text-slate-600 text-center">
+            <button id="updateTabNotices" onclick="switchUpdatesTab('Notices')" class="flex-1 py-2.5 text-red-600 border-b-2 border-red-600 bg-white transition">
+                Notices
+            </button>
+            <button id="updateTabNews" onclick="switchUpdatesTab('News / Events')" class="flex-1 py-2.5 hover:text-blue-600 transition">
+                News / Events
+            </button>
+            <button id="updateTabClubs" onclick="switchUpdatesTab('Clubs')" class="flex-1 py-2.5 hover:text-blue-600 transition">
+                Clubs
+            </button>
+        </div>
+
+        <!-- Scrollable Updates Feed -->
+        <div id="latestUpdatesFeed" class="p-4 overflow-y-auto max-h-80 min-h-[160px] updates-scroll space-y-3.5 bg-slate-50/50">
+            <div class="text-center py-6 text-slate-400 text-xs italic">
+                Loading campus notices & updates...
+            </div>
+        </div>
+
+        <!-- Footer Control Bar -->
+        <div class="px-4 py-2 bg-slate-100 border-t border-slate-200 flex justify-between items-center text-[10px] text-slate-500 font-semibold">
+            <span class="flex items-center gap-1"><i class="fa-solid fa-circle text-emerald-500 text-[8px] animate-pulse"></i> Live Sync Active</span>
+            <button onclick="dockUpdateToFooter()" class="text-slate-600 hover:text-blue-600 transition font-bold flex items-center gap-1">
+                <i class="fa-solid fa-anchor text-[9px]"></i> Dock to Footer
+            </button>
+        </div>
+    </div>
+
+    <!-- FLOATING RECENT UPDATES BALL (REOPEN LAUNCHER) -->
+    <button id="recentUpdatesFloatingBall" onclick="reopenLatestUpdatesBox()" class="hidden fixed bottom-6 right-24 z-40 bg-gradient-to-br from-blue-600 to-indigo-700 text-white w-12 h-12 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 group relative border-2 border-white">
+        <i class="fa-solid fa-bell text-lg"></i>
+        <span id="updateBallPulseDot" class="absolute -top-1 -right-1 bg-amber-400 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center text-[8px] text-slate-950 font-black">!</span>
+        <span class="hidden group-hover:block absolute right-14 bg-slate-900 text-white text-[11px] font-bold px-2.5 py-1 rounded shadow whitespace-nowrap">
+            Latest Updates Feed
+        </span>
+    </button>
+
+    <!-- INTERACTIVE ON-AIR SPOTLIGHT TOUR OVERLAY -->
+    <div id="tourOverlay" class="fixed inset-0 z-[100] hidden pointer-events-auto">
+        <div class="absolute inset-0 bg-slate-950/70 backdrop-blur-[2px] transition-all duration-300"></div>
+        <div id="tourSpotlight" class="absolute rounded-xl ring-4 ring-blue-500 ring-offset-4 ring-offset-slate-950/80 transition-all duration-300 pointer-events-none z-[101] shadow-[0_0_30px_rgba(59,130,246,0.6)]"></div>
+
+        <div id="tourCard" class="absolute z-[102] w-80 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-slate-200 p-5 space-y-3.5 transition-all duration-300">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
+                <div class="flex items-center gap-2">
+                    <span id="tourStepBadge" class="bg-blue-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider font-mono">Step 1 of 5</span>
+                    <span class="text-[11px] font-bold text-blue-900 flex items-center gap-1"><i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> Platform Guide</span>
+                </div>
+                <button onclick="dismissInteractiveTour()" class="text-slate-400 hover:text-rose-600 font-extrabold text-lg p-1 transition leading-none" title="Close / Dismiss Tour">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div>
+                <h4 id="tourTitle" class="font-extrabold text-slate-900 text-sm">Feature Highlight</h4>
+                <p id="tourDesc" class="text-xs text-slate-600 leading-relaxed mt-1">Explanation of this feature...</p>
+            </div>
+
+            <div class="flex justify-between items-center pt-2 border-t border-slate-100">
+                <button onclick="dismissInteractiveTour()" class="text-xs font-semibold text-slate-400 hover:text-slate-700 transition">
+                    Skip Tour
+                </button>
+                <div class="flex gap-2">
+                    <button id="tourPrevBtn" onclick="prevTourStep()" class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold transition">
+                        Back
+                    </button>
+                    <button id="tourNextBtn" onclick="nextTourStep()" class="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold transition shadow-sm flex items-center gap-1">
+                        <span>Next</span>
+                        <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Problem Approach Detail Modal -->
+    <div id="problemModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden modal-backdrop">
+        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden" onclick="event.stopPropagation()">
+            <div class="p-5 border-b border-slate-200 flex justify-between items-start bg-slate-50">
+                <div>
+                    <span id="modalNumber" class="text-xs font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800">Q#</span>
+                    <h3 id="modalTitle" class="text-lg font-bold text-slate-900 mt-1">Problem Title</h3>
+                    <p id="modalSubtitle" class="text-xs text-slate-500 mt-0.5">Category • Difficulty</p>
+                </div>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold p-1">&times;</button>
+            </div>
+
+            <div class="bg-slate-100 px-6 pt-2 border-b border-slate-200 flex gap-4 text-xs font-bold overflow-x-auto whitespace-nowrap">
+                <button id="modalTabOverviewBtn" onclick="switchModalTab('overview')" class="pb-2 border-b-2 border-blue-600 text-blue-600 shrink-0">Overview & Logic</button>
+                <button id="modalTabAiCodeBtn" onclick="switchModalTab('aicode')" class="pb-2 text-slate-500 hover:text-slate-800 flex items-center gap-1 shrink-0">
+                    <i class="fa-solid fa-code text-purple-600"></i> AI Solution Generator
+                </button>
+                <button id="modalTabReviewBtn" onclick="switchModalTab('review')" class="pb-2 text-slate-500 hover:text-slate-800 flex items-center gap-1 shrink-0">
+                    <i class="fa-solid fa-bug text-rose-600"></i> AI Debugger & Complexity
+                </button>
+                <button id="modalTabTestCasesBtn" onclick="switchModalTab('testcases')" class="pb-2 text-slate-500 hover:text-slate-800 flex items-center gap-1 shrink-0">
+                    <i class="fa-solid fa-vial text-amber-600"></i> AI Test Cases
+                </button>
+            </div>
+
+            <div class="p-6 overflow-y-auto modal-scroll space-y-4 text-xs sm:text-sm flex-grow">
+                <div id="modalTabOverview" class="space-y-4">
+                    <div>
+                        <h4 class="font-bold text-slate-900 uppercase text-xs tracking-wider mb-1 text-blue-600">Hiring Track & History</h4>
+                        <p id="modalHistory" class="text-slate-700 leading-relaxed"></p>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-900 uppercase text-xs tracking-wider mb-1 text-blue-600">Problem Description</h4>
+                        <p id="modalDescription" class="text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-200"></p>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-900 uppercase text-xs tracking-wider mb-1 text-blue-600">Algorithmic Approach & Logic</h4>
+                        <p id="modalApproach" class="text-slate-700 leading-relaxed"></p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 bg-slate-100 p-3 rounded-lg">
+                        <div>
+                            <span class="text-xs text-slate-500 block">Time Complexity</span>
+                            <span id="modalTimeComp" class="font-bold text-slate-800 font-mono text-xs">O(N)</span>
+                        </div>
+                        <div>
+                            <span class="text-xs text-slate-500 block">Space Complexity</span>
+                            <span id="modalSpaceComp" class="font-bold text-slate-800 font-mono text-xs">O(1)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="modalTabAiCode" class="hidden space-y-4">
+                    <div class="bg-purple-50 border border-purple-200 p-3 rounded-xl flex items-center justify-between">
+                        <div>
+                            <h4 class="font-bold text-purple-900 text-xs">Generate Optimal Code Solution</h4>
+                            <p class="text-[11px] text-purple-700">Generates clean, well-commented code via Gemini API.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <select id="aiCodeLangSelect" class="bg-white border border-purple-300 text-purple-900 text-xs font-semibold px-2 py-1 rounded-lg">
+                                <option value="python">Python 3</option>
+                                <option value="java">Java 17</option>
+                                <option value="cpp">C++20</option>
+                            </select>
+                            <button onclick="triggerAiCodeGeneration()" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center gap-1 shrink-0">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> Generate
+                            </button>
+                        </div>
+                    </div>
+                    <div id="aiCodeOutputArea" class="bg-slate-900 text-slate-200 p-4 rounded-xl min-h-[180px] font-mono text-xs leading-relaxed overflow-x-auto">
+                        <span class="text-slate-500 italic">// Click "Generate" above to process...</span>
+                    </div>
+                </div>
+
+                <div id="modalTabReview" class="hidden space-y-4">
+                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+                        <label class="block font-bold text-slate-800 text-xs">Paste your solution implementation to benchmark & review:</label>
+                        <textarea id="aiReviewInputCode" rows="6" placeholder="// Paste your Python, Java, or C++ code here..." class="w-full bg-white border border-slate-300 rounded-lg p-3 text-xs font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+                        <button onclick="triggerAiCodeReview()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2 rounded-lg transition flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-magnifying-glass-chart"></i> Review & Optimize Code
+                        </button>
+                    </div>
+                    <div id="aiReviewOutputArea" class="hidden bg-slate-50 border border-slate-200 p-4 rounded-xl text-xs space-y-2"></div>
+                </div>
+
+                <div id="modalTabTestCases" class="hidden space-y-4">
+                    <div class="bg-amber-50 border border-amber-200 p-3.5 rounded-xl flex items-center justify-between">
+                        <div>
+                            <h4 class="font-bold text-amber-900 text-xs">Generate Custom Edge Cases</h4>
+                            <p class="text-[11px] text-amber-700">Creates boundary inputs and scale limits.</p>
+                        </div>
+                        <button onclick="triggerAiTestCaseGeneration()" class="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center gap-1 shrink-0">
+                            <i class="fa-solid fa-vial"></i> Generate
+                        </button>
+                    </div>
+                    <div id="aiTestCasesOutputArea" class="space-y-3">
+                        <p class="text-slate-500 italic text-xs text-center py-4">Click "Generate" above to synthesize test inputs and edge cases...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center gap-2">
+                <button id="modalSolveBtn" onclick="toggleCurrentModalSolved()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-bold text-xs transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-check"></i> <span>Mark as Solved</span>
+                </button>
+                <a id="modalLeetCodeBtn" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg font-bold text-xs transition shadow-sm">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Solve Practice Problem
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gemini API Key Modal -->
+    <div id="apiKeyModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden modal-backdrop">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+                <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+                    <i class="fa-solid fa-key text-amber-500"></i> Google Gemini API Key
+                </h3>
+                <button onclick="closeApiKeyModal()" class="text-slate-400 hover:text-slate-600 font-bold">&times;</button>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">
+                Provide your Google Gemini API key to enable live AI reasoning, code generation, mock interview feedback, and quiz generation. Get your key free at <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-blue-600 underline font-semibold">Google AI Studio</a>.
+            </p>
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Gemini API Key (saved in browser memory)</label>
+                <div class="relative">
+                    <input type="password" id="geminiApiKeyInput" placeholder="AIzaSy..." class="w-full bg-slate-50 border border-slate-300 rounded-lg pl-3 pr-10 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono">
+                    <button type="button" onclick="toggleApiKeyVisibility()" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs">
+                        <i id="apiKeyEyeIcon" class="fa-solid fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="flex justify-between items-center pt-2">
+                <button onclick="clearApiKey()" class="text-xs text-rose-600 hover:underline font-semibold">Clear Key</button>
+                <div class="flex gap-2">
+                    <button onclick="closeApiKeyModal()" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 text-xs font-semibold">Cancel</button>
+                    <button onclick="saveApiKey()" class="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition">Save & Activate</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quizie Modal -->
+    <div id="quizieModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden modal-backdrop">
+        <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+                <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+                    <i class="fa-solid fa-gamepad text-cyan-600"></i> Quizie: CS Core & DSA Interactive Assessment
+                </h3>
+                <button onclick="closeQuizieModal()" class="text-slate-400 hover:text-slate-600 font-bold">&times;</button>
+            </div>
+
+            <div class="flex flex-wrap gap-3 items-center justify-between text-xs bg-slate-50 p-3 rounded-xl border border-slate-200">
+                <div class="flex items-center gap-2">
+                    <label class="font-bold text-slate-700">Category:</label>
+                    <select id="quizieCategorySelect" onchange="initQuizie()" class="bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold">
+                        <option value="ALL">All Mixed Domains</option>
+                        <option value="OOP">Object-Oriented Programming</option>
+                        <option value="DBMS">DBMS & SQL</option>
+                        <option value="OS">Operating Systems</option>
+                        <option value="DSA">Data Structures & Algorithms</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span id="quizieScoreText" class="font-extrabold text-emerald-600">Score: 0 / 0</span>
+                    <button onclick="triggerAiQuizGeneration()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg font-bold text-xs transition flex items-center gap-1">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> AI Generate Quiz
+                    </button>
+                </div>
+            </div>
+
+            <div id="quizieCardContainer" class="flex-grow overflow-y-auto modal-scroll space-y-4 py-2"></div>
+
+            <div class="flex justify-between items-center pt-2 border-t border-slate-200">
+                <span id="quizieProgressIndicator" class="text-xs font-semibold text-slate-500">Question 1 of 5</span>
+                <button id="quizieNextBtn" onclick="nextQuizieQuestion()" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold px-4 py-2 rounded-lg text-xs transition">
+                    Next Question <i class="fa-solid fa-arrow-right ml-1"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Chatbot Widget -->
+    <div class="fixed bottom-5 right-5 z-40">
+        <button id="chatToggleBtn" onclick="toggleChatDrawer()" class="bg-blue-600 hover:bg-blue-700 text-white p-3.5 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-105 group relative">
+            <i class="fa-solid fa-robot text-2xl"></i>
+            <span id="chatStatusDot" class="absolute -top-1 -right-1 bg-emerald-500 w-3.5 h-3.5 rounded-full border-2 border-white"></span>
+            <span class="hidden group-hover:block absolute right-14 bg-slate-900 text-white text-xs px-2.5 py-1 rounded shadow whitespace-nowrap font-medium">Infosys AI Assistant</span>
+        </button>
+
+        <div id="chatDrawer" class="chat-drawer hidden fixed bottom-20 right-5 w-96 max-w-[calc(100vw-2.5rem)] h-[540px] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden z-50">
+            <div class="bg-slate-900 text-white p-3.5 flex justify-between items-center border-b border-slate-800">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
+                        <i class="fa-solid fa-robot"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-1.5">
+                            <h4 class="font-bold text-sm leading-tight">Infosys AI Prep Bot</h4>
+                            <span id="engineBadge" class="bg-amber-500/30 text-amber-300 border border-amber-400/30 text-[9px] px-1.5 py-0.2 rounded font-mono">DIRECT API</span>
+                        </div>
+                        <p class="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Ask code, logic & update solved status
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="openApiKeyModal()" title="Configure Gemini API Key" class="text-slate-400 hover:text-amber-300 text-xs p-1">
+                        <i class="fa-solid fa-key"></i>
+                    </button>
+                    <button onclick="toggleChatDrawer()" class="text-slate-400 hover:text-white text-lg font-bold p-1">&times;</button>
+                </div>
+            </div>
+
+            <div class="bg-slate-100 p-2 border-b border-slate-200 flex gap-1.5 overflow-x-auto text-[11px] whitespace-nowrap">
+                <button onclick="sendQuickPrompt('Generate Python solution for Q54')" class="bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-600 px-2.5 py-1 rounded-full border border-slate-300 transition font-medium">💻 Write Python Code</button>
+                <button onclick="sendQuickPrompt('Finished Q25')" class="bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-600 px-2.5 py-1 rounded-full border border-slate-300 transition font-medium">✅ Mark Q25 Solved</button>
+                <button onclick="sendQuickPrompt('Recommend Next Problem')" class="bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-600 px-2.5 py-1 rounded-full border border-slate-300 transition font-medium">💡 Target Problem</button>
+            </div>
+
+            <div id="chatMessages" class="flex-grow p-4 overflow-y-auto chat-scroll space-y-3 text-xs bg-slate-50">
+                <div class="flex items-start gap-2">
+                    <div class="w-6 h-6 rounded bg-blue-600 text-white flex items-center justify-center text-xs shrink-0 font-bold">AI</div>
+                    <div class="bg-white p-3 rounded-2xl rounded-tl-none border border-slate-200 text-slate-700 shadow-sm leading-relaxed">
+                        Hello! I am your <strong>Infosys 2026 Dynamic Preparation Mentor</strong>.<br><br>
+                        Ask me for code, logic explanations, or say <em>"Finished Q25"</em> to mark problems solved!
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-3 bg-white border-t border-slate-200 flex items-center gap-2">
+                <input type="text" id="chatInput" placeholder="Ask code, logic, or say 'Finished Q5'..." class="flex-grow bg-slate-100 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <button onclick="sendChatMessage()" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAP8PTR0NuBO6V-_UMZuVQsy0BfXm6QCJE",
+            authDomain: "infosys-prep-2026.firebaseapp.com",
+            projectId: "infosys-prep-2026",
+            storageBucket: "infosys-prep-2026.firebasestorage.app",
+            messagingSenderId: "444923027346",
+            appId: "1:444923027346:web:72c221365d123850226b4b",
+            measurementId: "G-0T2FK8402C"
+        };
+
+        let db = null;
+        try {
+            if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+            } else if (typeof firebase !== 'undefined') {
+                db = firebase.firestore();
+            }
+        } catch (e) {
+            console.warn("Firebase initialize warning:", e);
+        }
+
+        let currentRegNo = localStorage.getItem('infosys_reg_no') || '';
+        let currentCandidateProfile = null;
+        let solvedSet = new Set();
+        let filteredQuestions = [];
+        let currentActiveModalId = null;
+        let geminiApiKey = localStorage.getItem('infosys_gemini_key') || '';
+
+        let allPublishedUpdates = [];
+        let activeUpdateCategoryTab = 'Notices';
+        let currentTourStep = 0;
+
+        const tourSteps = [
+            { targetId: 'userProfileBadge', fallbackId: 'authModal', title: 'Candidate Profile & Cloud ID', desc: 'Your 10-character college registration number acts as your unique identity. Your solved progress, test scores, and AI chat logs sync automatically.' },
+            { targetId: 'tourAiToolsHub', fallbackId: 'overview', title: 'AI Tools Hub Dropdown', desc: 'Access 8 AI utilities: Quizie CS Engine, 1:1 Live Interview Simulator, Exam Simulator, Resume Matcher, Flashcards, and Gemini Key options.' },
+            { targetId: 'heroAiStatusText', fallbackId: 'overview', title: 'Google Gemini API Key Setup', desc: 'Configure your free Gemini API key to activate live reasoning, automated solution generation, code debugging, and audio mentorship.' },
+            { targetId: 'tourProgressBar', fallbackId: 'overview', title: 'Real-Time Preparation Tracker', desc: 'Tracks your completed coding questions across SE, DSE, and SP hiring tracks in real time.' },
+            { targetId: 'chatToggleBtn', fallbackId: 'overview', title: '24/7 Floating AI Assistant', desc: 'Click this assistant anytime to ask for Python/Java/C++ code, logic explanations, or say "Finished Q5" to mark problems solved.' }
+        ];
+
+        async function checkCandidateExistsAndLoad(regNumber) {
+            const normalizedReg = regNumber.trim().toUpperCase();
+            if (!normalizedReg || normalizedReg.length !== 10 || !db) return false;
+
+            try {
+                const docRef = db.collection('candidates').doc(normalizedReg);
+                const docSnap = await docRef.get();
+                if (docSnap.exists) {
+                    await loadCandidateProfile(normalizedReg);
+                    return true;
+                }
+                return false;
+            } catch (err) {
+                console.error("Firestore candidate lookup error:", err);
+                return false;
+            }
+        }
+
+        async function handleSignIn(e) {
+            if (e) e.preventDefault();
+            const inputReg = document.getElementById('signInRegNo').value.trim().toUpperCase();
+            const errorDiv = document.getElementById('signInError');
+            const errorText = document.getElementById('signInErrorText');
+            errorDiv.classList.add('hidden');
+
+            if (!/^[A-Z0-9]{10}$/.test(inputReg)) {
+                if (errorText) errorText.textContent = "Please enter a valid 10-character alphanumeric Registration Number.";
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            const submitBtn = document.getElementById('signInSubmitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<div class="spin-ring spin-indigo w-4 h-4 border-2 mr-2"></div><span>Verifying candidate record...</span>`;
+
+            const exists = await checkCandidateExistsAndLoad(inputReg);
+            
+            if (!exists) {
+                if (errorText) errorText.textContent = `Registration ID "${inputReg}" was not found in our candidate system.`;
+                errorDiv.classList.remove('hidden');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<span>Sign In & Restore Profile</span> <i class="fa-solid fa-arrow-right"></i>`;
+                return;
+            }
+
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `<span>Sign In & Restore Profile</span> <i class="fa-solid fa-arrow-right"></i>`;
+        }
+
+        function redirectToSignUp() {
+            const regNo = document.getElementById('signInRegNo').value.trim().toUpperCase();
+            switchAuthTab('signup');
+            if (regNo) {
+                document.getElementById('signUpRegNo').value = regNo;
+            }
+            document.getElementById('signUpName').focus();
+        }
+
+        async function handleSignUp(e) {
+            if (e) e.preventDefault();
+            const regVal = document.getElementById('signUpRegNo').value.trim().toUpperCase();
+            const nameVal = document.getElementById('signUpName').value.trim();
+            const collegeVal = document.getElementById('signUpCollege').value.trim();
+            const branchVal = document.getElementById('signUpBranch').value.trim();
+            const gradVal = document.getElementById('signUpGradYear').value;
+            const errorDiv = document.getElementById('signUpError');
+            errorDiv.classList.add('hidden');
+
+            if (!/^[A-Z0-9]{10}$/.test(regVal)) {
+                errorDiv.textContent = "Registration Number must be exactly 10 alphanumeric characters (e.g. 22A91A0501).";
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            const submitBtn = document.getElementById('signUpSubmitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<div class="spin-ring spin-emerald w-4 h-4 border-2 mr-2"></div><span>Creating account...</span>`;
+
+            try {
+                if (db) {
+                    const docRef = db.collection('candidates').doc(regVal);
+                    const newCandidate = {
+                        regNumber: regVal,
+                        candidateName: nameVal,
+                        collegeName: collegeVal,
+                        branch: branchVal,
+                        gradYear: gradVal,
+                        createdAt: new Date().toISOString(),
+                        lastActive: new Date().toISOString(),
+                        solvedQuestions: [],
+                        featureUsage: { codeGen: 0, debugger: 0, quizie: 0, mockInterview: 0, flashcards: 0, examSimulator: 0, studyPlan: 0, resumeMatcher: 0, liveIntel: 0 },
+                        quizHistory: [],
+                        chatLogs: [],
+                        examSubmissions: []
+                    };
+                    await docRef.set(newCandidate);
+                }
+                await loadCandidateProfile(regVal, true);
+            } catch (err) {
+                errorDiv.textContent = "Failed to create candidate profile: " + err.message;
+                errorDiv.classList.remove('hidden');
+            }
+
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `<span>Create Account & Start</span> <i class="fa-solid fa-user-check"></i>`;
+        }
+
+        async function loadCandidateProfile(regNumber, isNewUser = false) {
+            const normalizedReg = regNumber.trim().toUpperCase();
+            if (!normalizedReg || normalizedReg.length !== 10) return false;
+
+            currentRegNo = normalizedReg;
+            localStorage.setItem('infosys_reg_no', currentRegNo);
+
+            document.getElementById('navUserRegNo').textContent = currentRegNo;
+            document.getElementById('userProfileBadge').classList.remove('hidden');
+            hideAuthModal();
+
+            if (db) {
+                try {
+                    const docRef = db.collection('candidates').doc(normalizedReg);
+                    const docSnap = await docRef.get();
+
+                    if (docSnap.exists) {
+                        currentCandidateProfile = docSnap.data();
+                        solvedSet = new Set(currentCandidateProfile.solvedQuestions || []);
+                        updateProgressMetrics();
+                        renderQuestions();
+                        await docRef.set({ lastActive: new Date().toISOString() }, { merge: true });
+                    }
+                } catch (err) {
+                    console.error("Error fetching candidate profile from Firestore:", err);
+                }
+            }
+
+            const tourCompleted = localStorage.getItem('infosys_tour_completed');
+            if (isNewUser || !tourCompleted) {
+                setTimeout(() => startInteractiveTour(false), 600);
+            }
+
+            return true;
+        }
+
+        function signOutCandidate() {
+            if (confirm("Sign out from candidate profile " + currentRegNo + "?")) {
+                localStorage.removeItem('infosys_reg_no');
+                currentRegNo = '';
+                currentCandidateProfile = null;
+                solvedSet.clear();
+                updateProgressMetrics();
+                renderQuestions();
+                document.getElementById('userProfileBadge').classList.add('hidden');
+                showAuthModal();
+            }
+        }
+
+        function showAuthModal() { document.getElementById('authModal').classList.remove('hidden'); }
+        function hideAuthModal() { document.getElementById('authModal').classList.add('hidden'); }
+
+        function switchAuthTab(tab) {
+            const signInTab = document.getElementById('authTabSignIn');
+            const signUpTab = document.getElementById('authTabSignUp');
+            const signInForm = document.getElementById('signInForm');
+            const signUpForm = document.getElementById('signUpForm');
+
+            if (tab === 'signin') {
+                signInTab.className = "flex-1 py-2.5 border-b-2 border-blue-600 text-blue-600 transition";
+                signUpTab.className = "flex-1 py-2.5 text-slate-500 hover:text-slate-800 transition";
+                signInForm.classList.remove('hidden');
+                signUpForm.classList.add('hidden');
+            } else {
+                signUpTab.className = "flex-1 py-2.5 border-b-2 border-blue-600 text-blue-600 transition";
+                signInTab.className = "flex-1 py-2.5 text-slate-500 hover:text-slate-800 transition";
+                signUpForm.classList.remove('hidden');
+                signInForm.classList.add('hidden');
+            }
+        }
+
+        function startInteractiveTour(force = false) {
+            if (!force && localStorage.getItem('infosys_tour_completed')) return;
+            currentTourStep = 0;
+            document.getElementById('tourOverlay').classList.remove('hidden');
+            renderTourStep();
+        }
+
+        function updateTourPosition() {
+            if (document.getElementById('tourOverlay').classList.contains('hidden')) return;
+            const step = tourSteps[currentTourStep];
+            let targetElem = document.getElementById(step.targetId);
+
+            if (!targetElem || targetElem.offsetWidth === 0 || targetElem.offsetHeight === 0) {
+                targetElem = document.getElementById(step.fallbackId) || document.body;
+            }
+
+            const rect = targetElem.getBoundingClientRect();
+            const spotlight = document.getElementById('tourSpotlight');
+            const card = document.getElementById('tourCard');
+
+            if (!spotlight || !card) return;
+
+            spotlight.style.top = `${Math.max(4, rect.top - 6)}px`;
+            spotlight.style.left = `${Math.max(4, rect.left - 6)}px`;
+            spotlight.style.width = `${rect.width + 12}px`;
+            spotlight.style.height = `${rect.height + 12}px`;
+
+            let cardTop = rect.bottom + 12;
+            let cardLeft = rect.left;
+
+            if (cardLeft + 340 > window.innerWidth) cardLeft = window.innerWidth - 350;
+            if (cardLeft < 10) cardLeft = 10;
+            
+            if (cardTop + 220 > window.innerHeight) {
+                cardTop = Math.max(10, rect.top - 210);
+            }
+            if (cardTop < 10) cardTop = 10;
+
+            card.style.top = `${cardTop}px`;
+            card.style.left = `${cardLeft}px`;
+        }
+
+        function renderTourStep() {
+            const step = tourSteps[currentTourStep];
+            let targetElem = document.getElementById(step.targetId);
+
+            if (!targetElem || targetElem.offsetWidth === 0) {
+                targetElem = document.getElementById(step.fallbackId) || document.body;
+            }
+
+            if (targetElem && targetElem !== document.body) {
+                targetElem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+
+            document.getElementById('tourStepBadge').textContent = `Step ${currentTourStep + 1} of ${tourSteps.length}`;
+            document.getElementById('tourTitle').textContent = step.title;
+            document.getElementById('tourDesc').textContent = step.desc;
+
+            document.getElementById('tourPrevBtn').style.visibility = currentTourStep === 0 ? 'hidden' : 'visible';
+            const nextBtn = document.getElementById('tourNextBtn');
+            if (currentTourStep === tourSteps.length - 1) {
+                nextBtn.innerHTML = `<span>Finish</span> <i class="fa-solid fa-check text-[10px]"></i>`;
+            } else {
+                nextBtn.innerHTML = `<span>Next</span> <i class="fa-solid fa-arrow-right text-[10px]"></i>`;
+            }
+
+            updateTourPosition();
+            setTimeout(updateTourPosition, 150);
+            setTimeout(updateTourPosition, 400);
+        }
+
+        function nextTourStep() {
+            if (currentTourStep < tourSteps.length - 1) {
+                currentTourStep++;
+                renderTourStep();
+            } else {
+                dismissInteractiveTour();
+            }
+        }
+
+        function prevTourStep() {
+            if (currentTourStep > 0) {
+                currentTourStep--;
+                renderTourStep();
+            }
+        }
+
+        function dismissInteractiveTour() {
+            document.getElementById('tourOverlay').classList.add('hidden');
+            localStorage.setItem('infosys_tour_completed', 'true');
+        }
+
+        function initRealtimeUpdatesListener() {
+            if (!db) return;
+            try {
+                db.collection('site_updates').orderBy('createdAt', 'desc').limit(20).onSnapshot(snapshot => {
+                    allPublishedUpdates = [];
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        allPublishedUpdates.push({ id: doc.id, ...data });
+                    });
+
+                    renderUpdatesFeed();
+
+                    if (allPublishedUpdates.length > 0) {
+                        const latestDocId = allPublishedUpdates[0].id;
+                        const lastSeenDocId = localStorage.getItem('infosys_last_seen_update');
+                        const isDocked = localStorage.getItem('infosys_updates_docked') === 'true';
+
+                        if (latestDocId !== lastSeenDocId) {
+                            if (!isDocked) {
+                                document.getElementById('latestUpdatesCard').classList.remove('hidden');
+                                document.getElementById('recentUpdatesFloatingBall').classList.add('hidden');
+                            } else {
+                                updateDockedFooterNotice(allPublishedUpdates[0]);
+                            }
+                        } else {
+                            if (!isDocked) {
+                                document.getElementById('recentUpdatesFloatingBall').classList.remove('hidden');
+                            } else {
+                                updateDockedFooterNotice(allPublishedUpdates[0]);
+                            }
+                        }
+                    }
+                });
+            } catch (err) {
+                console.error("Firestore update listener error:", err);
+            }
+        }
+
+        function switchUpdatesTab(category) {
+            activeUpdateCategoryTab = category;
+            
+            const btnNotices = document.getElementById('updateTabNotices');
+            const btnNews = document.getElementById('updateTabNews');
+            const btnClubs = document.getElementById('updateTabClubs');
+
+            [btnNotices, btnNews, btnClubs].forEach(b => {
+                b.className = "flex-1 py-2.5 hover:text-blue-600 transition";
+            });
+
+            if (category === 'Notices') btnNotices.className = "flex-1 py-2.5 text-red-600 border-b-2 border-red-600 bg-white transition font-extrabold";
+            else if (category === 'News / Events') btnNews.className = "flex-1 py-2.5 text-blue-600 border-b-2 border-blue-600 bg-white transition font-extrabold";
+            else if (category === 'Clubs') btnClubs.className = "flex-1 py-2.5 text-purple-600 border-b-2 border-purple-600 bg-white transition font-extrabold";
+
+            renderUpdatesFeed();
+        }
+
+        function renderUpdatesFeed() {
+            const container = document.getElementById('latestUpdatesFeed');
+            if (!container) return;
+
+            const filtered = allPublishedUpdates.filter(u => {
+                if (activeUpdateCategoryTab === 'Notices') return (u.category === 'Notices' || u.category === 'Exam Alert' || u.category === 'Drive Schedule' || !u.category);
+                if (activeUpdateCategoryTab === 'News / Events') return (u.category === 'News / Events' || u.category === 'System Announcement');
+                if (activeUpdateCategoryTab === 'Clubs') return u.category === 'Clubs';
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-slate-400 text-xs">
+                        <i class="fa-solid fa-folder-open text-2xl mb-1 text-slate-300 block"></i>
+                        No active announcements in <strong>${escapeHtml(activeUpdateCategoryTab)}</strong>.
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filtered.map(u => {
+                const dateStr = u.dateTimeStr || (u.createdAt ? new Date(u.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ⏱ ' + new Date(u.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently Posted');
+                
+                return `
+                    <div class="bg-white border border-slate-200 p-3 rounded-lg shadow-sm space-y-2 hover:border-blue-300 transition relative">
+                        <div class="flex justify-between items-center gap-2">
+                            <span class="bg-blue-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 font-mono">
+                                📅 ${escapeHtml(dateStr)}
+                            </span>
+                            ${u.isNew !== false ? '<span class="new-starburst">NEW!</span>' : ''}
+                        </div>
+                        <h5 class="font-extrabold text-slate-900 text-xs leading-snug uppercase tracking-tight">
+                            ${escapeHtml(u.title)}
+                        </h5>
+                        ${u.body ? `<p class="text-[11px] text-slate-600 leading-relaxed font-sans">${escapeHtml(u.body)}</p>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function dismissLatestUpdatesBox() {
+            if (allPublishedUpdates.length > 0) {
+                localStorage.setItem('infosys_last_seen_update', allPublishedUpdates[0].id);
+            }
+            document.getElementById('latestUpdatesCard').classList.add('hidden');
+            document.getElementById('recentUpdatesFloatingBall').classList.remove('hidden');
+        }
+
+        function reopenLatestUpdatesBox() {
+            document.getElementById('recentUpdatesFloatingBall').classList.add('hidden');
+            document.getElementById('latestUpdatesCard').classList.remove('hidden');
+        }
+
+        function dockUpdateToFooter() {
+            localStorage.setItem('infosys_updates_docked', 'true');
+            if (allPublishedUpdates.length > 0) {
+                localStorage.setItem('infosys_last_seen_update', allPublishedUpdates[0].id);
+                updateDockedFooterNotice(allPublishedUpdates[0]);
+            }
+            document.getElementById('latestUpdatesCard').classList.add('hidden');
+            document.getElementById('recentUpdatesFloatingBall').classList.add('hidden');
+            document.getElementById('dockedUpdateContainer').classList.remove('hidden');
+        }
+
+        function updateDockedFooterNotice(updateDoc) {
+            document.getElementById('dockedUpdateCategory').textContent = (updateDoc.category || 'NOTICE').toUpperCase();
+            document.getElementById('dockedUpdateTitle').textContent = updateDoc.title || 'Campus Update';
+            document.getElementById('dockedUpdateContainer').classList.remove('hidden');
+        }
+
+        function reopenUpdateBoxFromDock() {
+            localStorage.setItem('infosys_updates_docked', 'false');
+            document.getElementById('dockedUpdateContainer').classList.add('hidden');
+            reopenLatestUpdatesBox();
+        }
+
+        function getApiKey() {
+            if (!geminiApiKey) openApiKeyModal();
+            return geminiApiKey;
+        }
+
+        function openApiKeyModal() {
+            document.getElementById('geminiApiKeyInput').value = geminiApiKey;
+            document.getElementById('apiKeyModal').classList.remove('hidden');
+        }
+
+        function closeApiKeyModal() { document.getElementById('apiKeyModal').classList.add('hidden'); }
+
+        function saveApiKey() {
+            const val = document.getElementById('geminiApiKeyInput').value.trim();
+            if (!val) { alert("Please enter a valid Gemini API key."); return; }
+            geminiApiKey = val;
+            localStorage.setItem('infosys_gemini_key', val);
+            closeApiKeyModal();
+            updateEngineStatusUI();
+        }
+
+        function clearApiKey() {
+            geminiApiKey = '';
+            localStorage.removeItem('infosys_gemini_key');
+            document.getElementById('geminiApiKeyInput').value = '';
+            closeApiKeyModal();
+            updateEngineStatusUI();
+        }
+
+        function updateEngineStatusUI() {
+            const heroStatus = document.getElementById('heroAiStatusText');
+            if (heroStatus) heroStatus.textContent = geminiApiKey ? "Gemini Live" : "Direct API";
+        }
+
+        async function fetchWithBackoff(url, options, maxRetries = 3) {
+            let delay = 1000;
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.status === 429) {
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2;
+                        continue;
+                    }
+                    if (!response.ok) {
+                        const errText = await response.text();
+                        let errMsg = `API Error ${response.status}`;
+                        try {
+                            const errObj = JSON.parse(errText);
+                            if (errObj.error?.message) errMsg += `: ${errObj.error.message}`;
+                        } catch(e) {}
+                        throw new Error(errMsg);
+                    }
+                    return response;
+                } catch (err) {
+                    if (i === maxRetries - 1) throw err;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                }
+            }
+        }
+
+        async function callGeminiApiRaw(prompt, systemInstruction = "", structuredSchema = null, enableSearchGrounding = false) {
+            const key = getApiKey();
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${key}`;
+            
+            const payload = { contents: [{ parts: [{ text: prompt }] }] };
+            if (systemInstruction) payload.systemInstruction = { parts: [{ text: systemInstruction }] };
+            if (structuredSchema) payload.generationConfig = { responseMimeType: "application/json", responseSchema: structuredSchema };
+            if (enableSearchGrounding) payload.tools = [{ "google_search": {} }];
+
+            const response = await fetchWithBackoff(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+            if (result.error) throw new Error(result.error.message || `API Error ${result.error.code}`);
+
+            const candidate = result.candidates?.[0];
+            return { text: candidate?.content?.parts?.[0]?.text || "" };
+        }
+
+        const questionsData = [
+            // EASY PROBLEMS (1 to 35)
+            { id: 1, title: "Reverse an Array", difficulty: "Easy", roles: ["SE", "DSE"], topic: "Arrays & Hashing", history: "SE, DSE Drive", desc: "Given an array A of N integers, reverse the elements in-place without utilizing auxiliary array allocations.", approach: "Maintain two pointer variables initialized at index 0 and N - 1. Iteratively swap values.", time: "O(N)", space: "O(1)", leetcode: "https://www.geeksforgeeks.org/problems/reverse-an-array/1", lcName: "GeeksforGeeks: Reverse an Array", platform: "GeeksforGeeks" },
+            { id: 2, title: "Check Palindrome String", difficulty: "Easy", roles: ["SE", "DSE", "SP"], topic: "Strings & Text Processing", history: "SE, DSE Drive", desc: "Given a string S, determine whether it reads identically in forward and reverse order.", approach: "Two-pointer inward scan comparing corresponding characters for equality.", time: "O(N)", space: "O(1)", leetcode: "https://leetcode.com/problems/valid-palindrome/", lcName: "LeetCode 125: Valid Palindrome", platform: "LeetCode" },
+            { id: 3, title: "Second Largest Element in an Array", difficulty: "Easy", roles: ["SE", "DSE"], topic: "Arrays & Hashing", history: "SE, DSE Drive", desc: "Identify the second largest distinct integer in an unsorted array of size N.", approach: "Single-pass linear scan maintaining two scalar variables tracking primary and secondary maxima.", time: "O(N)", space: "O(1)", leetcode: "https://www.geeksforgeeks.org/problems/second-largest3735/1", lcName: "GeeksforGeeks: Second Largest", platform: "GeeksforGeeks" },
+            { id: 4, title: "Count Vowels and Consonants in a String", difficulty: "Easy", roles: ["SE"], topic: "Strings & Text Processing", history: "SE Drive", desc: "Parse string S and compute independent tallies for alphabetic vowels and consonants.", approach: "Linear scan against a constant-sized lookup table containing vowel characters.", time: "O(N)", space: "O(1)", leetcode: "https://leetcode.com/problems/reverse-vowels-of-a-string/", lcName: "LeetCode 345: Reverse Vowels of String", platform: "LeetCode" },
+            { id: 5, title: "Find the Missing Number (1 to N)", difficulty: "Easy", roles: ["SE", "DSE"], topic: "Math & Number Theory", history: "SE, DSE Drive", desc: "An array of size N-1 contains distinct integers in range [1, N]. Identify missing value.", approach: "Calculate expected arithmetic sum N(N+1)/2 and subtract array sum.", time: "O(N)", space: "O(1)", leetcode: "https://leetcode.com/problems/missing-number/", lcName: "LeetCode 268: Missing Number", platform: "LeetCode" },
+            { id: 6, title: "Check if a Number is Prime", difficulty: "Easy", roles: ["SE", "DSE"], topic: "Math & Number Theory", history: "SE, DSE Drive", desc: "Given integer N >= 2, return whether N is prime.", approach: "Check divisibility up to sqrt(N).", time: "O(sqrt(N))", space: "O(1)", leetcode: "https://www.geeksforgeeks.org/problems/prime-number2314/1", lcName: "GeeksforGeeks: Prime Number", platform: "GeeksforGeeks" },
+            { id: 7, title: "Print Fibonacci Series up to N Terms", difficulty: "Easy", roles: ["SE"], topic: "Math & Number Theory", history: "SE Drive", desc: "Output the first N terms of the Fibonacci sequence starting from 0 and 1.", approach: "Iterative accumulation storing two most recent values.", time: "O(N)", space: "O(1)", leetcode: "https://leetcode.com/problems/fibonacci-number/", lcName: "LeetCode 509: Fibonacci Number", platform: "LeetCode" },
+            { id: 8, title: "Binary Search in a Sorted Array", difficulty: "Easy", roles: ["SE", "DSE"], topic: "Greedy & Searching", history: "SE, DSE Drive", desc: "Locate target value T within sorted array A.", approach: "Divide-and-conquer bisection updating search bounds using midpoint calculation.", time: "O(log N)", space: "O(1)", leetcode: "https://leetcode.com/problems/binary-search/", lcName: "LeetCode 704: Binary Search", platform: "LeetCode" },
+            { id: 9, title: "Reverse a Singly Linked List", difficulty: "Easy", roles: ["SE", "DSE"], topic: "Two Pointers & Sliding Window", history: "SE, DSE Drive", desc: "Given head of a singly linked list, reverse node pointers in-place.", approach: "Iterative pointer modification using three pointers (prev, curr, next).", time: "O(N)", space: "O(1)", leetcode: "https://leetcode.com/problems/reverse-linked-list/", lcName: "LeetCode 206: Reverse Linked List", platform: "LeetCode" },
+            { id: 10, title: "Check if Two Strings are Anagrams", difficulty: "Easy", roles: ["SE", "DSE"], topic: "Strings & Text Processing", history: "SE, DSE Drive", desc: "Determine if string S is a permutation of string T.", approach: "Populate a 26-element integer frequency array.", time: "O(N)", space: "O(1)", leetcode: "https://leetcode.com/problems/valid-anagram/", lcName: "LeetCode 242: Valid Anagram", platform: "LeetCode" },
+            { id: 11, title: "Find All Duplicates in an Array", difficulty: "Easy", roles: ["SE", "DSE"], topic: "Arrays & Hashing", history: "SE, DSE Drive", desc: "An array of N integers contains values bounded in [1, N]. Identify duplicated integers.", approach: "Use elements as indices, negating target element value.", time: "O(N)", space: "O(1)", leetcode: "https://leetcode.com/problems/find-all-duplicates-in-an-array/", lcName: "LeetCode 442: Find All Duplicates", platform: "LeetCode" },
+            { id: 12, title: "Rotate Array by K Steps", difficulty: "Easy", roles: ["SE", "DSE"], topic: "Arrays & Hashing", history: "SE, DSE Drive", desc: "Rotate an array of N integers to the right by K positions.", approach: "Normalize K = K % N. Reverse full array, then first K, then remaining elements.", time: "O(N)", space: "O(1)", leetcode: "https://leetcode.com/problems/rotate-array/", lcName: "LeetCode 189: Rotate Array", platform: "LeetCode" },
+            { id: 13, title: "Matrix Diagonal Sum", difficulty: "Easy", roles: ["SE", "DSE"], topic: "Arrays & Hashing", history: "SE, DSE Drive", desc: "Compute combined sum of primary and secondary diagonals of an N x N matrix.", approach: "Iterate i from 0 to N-1, adding A[i][i] and A[i][N-1-i].", time: "O(N)", space: "O(1)", leetcode: "https://leetcode.com/problems/matrix-diagonal-sum/", lcName: "LeetCode 1572: Matrix Diagonal Sum", platform: "LeetCode" },
+            { id: 14, title: "Implementation of Bubble Sort", difficulty: "Easy", roles: ["SE"], topic: "Arrays & Hashing", history: "SE Drive", desc: "Sort an array of N integers using adjacent element comparisons.", approach: "Nested iteration comparing adjacent pairs.", time: "O(N^2)", space: "O(1)", leetcode: "https://www.geeksforgeeks.org/problems/bubble-sort/1", lcName: "GeeksforGeeks: Bubble Sort", platform: "GeeksforGeeks" },
+            { id: 15, title: "Check if a Number is a Power of Two", difficulty: "Easy", roles: ["SE", "DSE"], topic: "Bit Manipulation & Tries", history: "SE, DSE Drive", desc: "Determine whether integer N > 0 is 2^k.", approach: "Bitwise evaluation using N > 0 && (N & (N - 1)) == 0.", time: "O(1)", space: "O(1)", leetcode: "https://leetcode.com/problems/power-of-two/", lcName: "LeetCode 231: Power of Two", platform: "LeetCode" },
+            { id: 16, title: "Intersection of Two Arrays", difficulty: "Easy", roles: ["SE", "DSE"], topic: "Arrays & Hashing", history: "Infosys Campus OA 2025", desc: "Given two integer arrays nums1 and nums2, return an array of their intersection.", approach: "Store elements of nums1 in a hash set, then iterate nums2 collecting common elements.", time: "O(N + M)", space: "O(N)", leetcode: "https://leetcode.com/problems/intersection-of-two-arrays/", lcName: "LeetCode 349: Intersection of Two Arrays", platform: "LeetCode" },
+            { id: 17, title: "Contains Duplicate", difficulty: "Easy", roles: ["SE"], topic: "Arrays & Hashing", history: "Infosys SE Drive 2025", desc: "Given an integer array nums, return true if any value appears at least twice.", approach: "Insert elements into a hash set; if element exists, return true.", time: "O(N)", space: "O(N)", leetcode: "https://leetcode.com/problems/contains-duplicate/", lcName: "LeetCode 217: Contains Duplicate", platform: "LeetCode" },
+            { id: 18, title: "Maximum Ascending Subarray Sum", difficulty: "Easy", roles: ["SE", "DSE"], topic: "Arrays & Hashing", history: "Infosys Campus OA 2026", desc: "Given an array of positive integers nums, return maximum possible sum of an ascending subarray.", approach: "Track current ascending subarray sum and update max sum when elements decrease.", time: "O(N)", space: "O(1)", leetcode: "https://leetcode.com/problems/maximum-ascending-subarray-sum/", lcName: "LeetCode 1800: Max Ascending Subarray", platform: "LeetCode" },
+            { id: 19, title: "Length of Last Word", difficulty: "Easy", roles: ["SE"], topic: "Strings & Text Processing", history: "Infosys SE Drive 2025", desc: "Given a string s consisting of words and spaces, return length of last word.", approach: "Scan string from right to left, skipping trailing spaces and counting characters.", time: "O(N)", space: "O(1)", leetcode: "https://leetcode.com/problems/length-of-last-word/", lcName: "LeetCode 58: Length of Last Word", platform: "LeetCode" },
+            { id: 20, title: "Valid Perfect Square", difficulty: "Easy", roles: ["SE", "DSE"], topic: "Math & Number Theory", history: "Infosys SE/DSE Drive 2025", desc: "Given a positive integer num, return true if num is a perfect square.", approach: "Use binary search in range [1, num] comparing mid * mid with num.", time: "O(log N)", space: "O(1)", leetcode: "https://leetcode.com/problems/valid-perfect-square/", lcName: "LeetCode 367: Valid Perfect Square", platform: "LeetCode" },
+            { id: 21, title: "Merge Sorted Array", difficulty: "Easy", roles: ["SE", "DSE"], topic: "Arrays & Hashing", history: "Infosys Campus Drive 2025", desc: "Merge two sorted arrays nums1 and nums2 into nums1 in non-decreasing order.", approach: "Three pointers filling nums1 from right to left to avoid extra memory.", time: "O(M + N)", space: "O(1)", leetcode: "https://leetcode.com/problems/merge-sorted-array/", lcName: "LeetCode 88: Merge Sorted Array", platform: "LeetCode" },
+            { id: 22, title: "Square Root of Integer", difficulty: "Easy", roles: ["SE"], topic: "Math & Number Theory", history: "Infosys SE Test", desc: "Compute and return floor of square root of integer x.", approach: "Binary search in range [0, x].", time: "O(log X)", space: "O(1)", leetcode: "https://www.geeksforgeeks.org/problems/square-root/1", lcName: "GeeksforGeeks: Square Root", platform: "GeeksforGeeks" },
+            { id: 23, title: "Majority Element", difficulty: "Easy", roles: ["SE", "DSE"], topic: "Arrays & Hashing", history: "Infosys DSE/SE Drive 2025", desc: "Find element appearing more than N/2 times in array.", approach: "Boyer-Moore Voting Algorithm.", time: "O(N)", space: "O(1)", leetcode: "https://leetcode.com/problems/majority-element/", lcName: "LeetCode 169: Majority Element", platform: "LeetCode" },
+            { id: 24, title: "Climbing Stairs", difficulty: "Easy", roles: ["SE", "DSE"], topic: "Dynamic Programming", history: "Infosys Foundational DP 2025", desc: "Takes N steps to reach top. Each time climb 1 or 2 steps. How many distinct ways?", approach: "Dynamic programming: dp[i] = dp[i-1] + dp[i-2].", time: "O(N)", space: "O(1)", leetcode: "https://leetcode.com/problems/climbing-stairs/", lcName: "LeetCode 70: Climbing Stairs", platform: "LeetCode" },
+            { id: 25, title: "Single Number", difficulty: "Easy", roles: ["SE", "DSE"], topic: "Bit Manipulation & Tries", history: "SE, DSE Drive", desc: "Every element appears twice except one. Find that single non-repeated element.", approach: "Cumulative XOR over array. x ^ x = 0 and x ^ 0 = x.", time: "O(N)", space: "O(1)", leetcode: "https://leetcode.com/problems/single-number/", lcName: "LeetCode 136: Single Number", platform: "LeetCode" },
+            { id: 26, title: "Pascal's Triangle", difficulty: "Easy", roles: ["SE", "DSE"], topic: "Arrays & Hashing", history: "SE, DSE Drive", desc: "Given numRows, generate first numRows of Pascal's Triangle.", approach: "Iterative construction where item[i][j] = prev[i-1][j-1] + prev[i-1][j].", time: "O(N^2)", space: "O(N^2)", leetcode: "https://leetcode.com/problems/pascals-triangle/", lcName: "LeetCode 118: Pascal's Triangle", platform: "LeetCode" },
+            { id: 27, title: "Remove Duplicates from Sorted Array", difficulty: "Easy", roles: ["SE"], topic: "Two Pointers & Sliding Window", history: "SE Drive", desc: "Remove duplicates in-place from sorted array, returning unique element count.", approach: "Two pointers: write index pointer and fast scanner pointer.", time: "O(N)", space: "O(1)", leetcode: "https://leetcode.com/problems/remove-duplicates-from-sorted-array/", lcName: "LeetCode 26: Remove Duplicates from Sorted Array", platform: "LeetCode" },
+            { id: 28, title: "Maximum Subarray (Kadane's Algorithm)", difficulty: "Easy", roles: ["SE", "DSE"], topic: "Arrays & Hashing", history: "SE, DSE Drive", desc: "Find contiguous subarray with largest sum.", approach: "Kadane's Algorithm tracking current max sum and global max sum.", time: "O(N)", space: "O(1)", leetcode: "https://leetcode.com/problems/maximum-subarray/", lcName: "LeetCode 53: Maximum Subarray", platform: "LeetCode" },
+            { id: 29, title: "Symmetric Tree", difficulty: "Easy", roles: ["SE", "DSE"], topic: "Trees & Graphs", history: "SE, DSE Drive", desc: "Check whether a binary tree is a mirror image of itself.", approach: "Recursive DFS comparing left subtree with right subtree.", time: "O(N)", space: "O(H)", leetcode: "https://leetcode.com/problems/symmetric-tree/", lcName: "LeetCode 101: Symmetric Tree", platform: "LeetCode" },
+            { id: 30, title: "Maximum Depth of Binary Tree", difficulty: "Easy", roles: ["SE"], topic: "Trees & Graphs", history: "SE Drive", desc: "Return height or maximum depth from root to leaf node.", approach: "Recursive DFS computing 1 + max(depth(left), depth(right)).", time: "O(N)", space: "O(H)", leetcode: "https://leetcode.com/problems/maximum-depth-of-binary-tree/", lcName: "LeetCode 104: Max Depth of Binary Tree", platform: "LeetCode" },
+            { id: 31, title: "Best Time to Buy and Sell Stock", difficulty: "Easy", roles: ["SE", "DSE"], topic: "Arrays & Hashing", history: "SE, DSE Drive", desc: "Maximize profit achievable through single buy and sell transaction.", approach: "Track minimum price seen so far and max profit.", time: "O(N)", space: "O(1)", leetcode: "https://leetcode.com/problems/best-time-to-buy-and-sell-stock/", lcName: "LeetCode 121: Buy and Sell Stock", platform: "LeetCode" },
+            { id: 32, title: "Move Zeroes", difficulty: "Easy", roles: ["SE"], topic: "Arrays & Hashing", history: "SE Drive", desc: "Shift all zeroes to end of array in-place maintaining relative order.", approach: "Two-pointer write index technique.", time: "O(N)", space: "O(1)", leetcode: "https://leetcode.com/problems/move-zeroes/", lcName: "LeetCode 283: Move Zeroes", platform: "LeetCode" },
+            { id: 33, title: "Missing Number in Array", difficulty: "Easy", roles: ["SE", "DSE"], topic: "Math & Number Theory", history: "SE, DSE Drive", desc: "Find single missing integer in array from 1 to N.", approach: "Expected sum subtraction.", time: "O(N)", space: "O(1)", leetcode: "https://www.geeksforgeeks.org/problems/missing-number-in-array1416/1", lcName: "GeeksforGeeks: Missing Number", platform: "GeeksforGeeks" },
+            { id: 34, title: "Valid Parentheses", difficulty: "Easy", roles: ["SE", "DSE"], topic: "Strings & Text Processing", history: "SE, DSE Drive", desc: "Check if bracket sequence '()[]{}' is balanced.", approach: "Stack data structure pushing opening brackets.", time: "O(N)", space: "O(N)", leetcode: "https://leetcode.com/problems/valid-parentheses/", lcName: "LeetCode 20: Valid Parentheses", platform: "LeetCode" },
+            { id: 35, title: "Linked List Cycle", difficulty: "Easy", roles: ["SE", "DSE"], topic: "Two Pointers & Sliding Window", history: "SE, DSE Drive", desc: "Determine if linked list contains a loop.", approach: "Floyd's Tortoise and Hare algorithm.", time: "O(N)", space: "O(1)", leetcode: "https://leetcode.com/problems/linked-list-cycle/", lcName: "LeetCode 141: Linked List Cycle", platform: "LeetCode" },
+
+            // MEDIUM PROBLEMS (36 to 75)
+            { id: 36, title: "Longest Substring Without Repeating Characters", difficulty: "Medium", roles: ["DSE", "SP"], topic: "Two Pointers & Sliding Window", history: "DSE, SP Drive", desc: "Compute maximum length of contiguous substring containing unique characters.", approach: "Sliding window with hash map storing last seen index of each character.", time: "O(N)", space: "O(min(N, Alphabet))", leetcode: "https://leetcode.com/problems/longest-substring-without-repeating-characters/", lcName: "LeetCode 3: Longest Substring", platform: "LeetCode" },
+            { id: 37, title: "Next Permutation", difficulty: "Medium", roles: ["DSE", "SP"], topic: "Arrays & Hashing", history: "DSE, SP Drive", desc: "Rearrange numbers into lexicographically next greater permutation in-place.", approach: "Find rightmost pivot, swap with smallest greater element on right, reverse suffix.", time: "O(N)", space: "O(1)", leetcode: "https://leetcode.com/problems/next-permutation/", lcName: "LeetCode 31: Next Permutation", platform: "LeetCode" },
+            { id: 38, title: "Maximum Product Subarray", difficulty: "Medium", roles: ["DSE", "SP"], topic: "Dynamic Programming", history: "DSE, SP Drive", desc: "Identify contiguous subarray producing largest numerical product.", approach: "Dynamic programming keeping max_product and min_product concurrently.", time: "O(N)", space: "O(1)", leetcode: "https://leetcode.com/problems/maximum-product-subarray/", lcName: "LeetCode 152: Max Product Subarray", platform: "LeetCode" },
+            { id: 39, title: "Container With Most Water", difficulty: "Medium", roles: ["DSE", "SP"], topic: "Two Pointers & Sliding Window", history: "Infosys DSE/SP 2025", desc: "Given N height lines, find two lines that together with x-axis form container holding max water.", approach: "Two pointers at outer ends, moving pointer with smaller height inward.", time: "O(N)", space: "O(1)", leetcode: "https://leetcode.com/problems/container-with-most-water/", lcName: "LeetCode 11: Container With Most Water", platform: "LeetCode" },
+            { id: 40, title: "3Sum", difficulty: "Medium", roles: ["DSE", "SP"], topic: "Two Pointers & Sliding Window", history: "Infosys DSE OA 2025", desc: "Find all unique triplets in array summing to zero.", approach: "Sort array, iterate fixed element, and use two pointers for remaining pair.", time: "O(N^2)", space: "O(1)", leetcode: "https://leetcode.com/problems/3sum/", lcName: "LeetCode 15: 3Sum", platform: "LeetCode" },
+            { id: 41, title: "Word Search", difficulty: "Medium", roles: ["DSE", "SP"], topic: "Trees & Graphs", history: "Infosys SP Drive 2025", desc: "Check if word exists in 2D grid of characters using adjacent cells.", approach: "Backtracking DFS exploring 4 directions.", time: "O(N * M * 4^L)", space: "O(L)", leetcode: "https://leetcode.com/problems/word-search/", lcName: "LeetCode 79: Word Search", platform: "LeetCode" },
+            { id: 42, title: "Coin Change II (Combination Count)", difficulty: "Medium", roles: ["DSE", "SP"], topic: "Dynamic Programming", history: "Infosys DSE/SP 2025", desc: "Find number of combinations making up amount using given coins.", approach: "Unbounded Knapsack 1D DP: dp[i] += dp[i - coin].", time: "O(N * Amount)", space: "O(Amount)", leetcode: "https://leetcode.com/problems/coin-change-ii/", lcName: "LeetCode 518: Coin Change II", platform: "LeetCode" },
+            { id: 43, title: "Course Schedule (Cycle Detection in Directed Graph)", difficulty: "Medium", roles: ["SP"], topic: "Trees & Graphs", history: "Infosys SP Test 2025", desc: "Determine if possible to finish all courses given prerequisite pairs.", approach: "Topological Sort via Kahn's Algorithm or DFS recursion stack cycle detection.", time: "O(V + E)", space: "O(V + E)", leetcode: "https://leetcode.com/problems/course-schedule/", lcName: "LeetCode 207: Course Schedule", platform: "LeetCode" },
+            { id: 44, title: "Find Peak Element", difficulty: "Medium", roles: ["DSE"], topic: "Greedy & Searching", history: "Infosys DSE Drive 2025", desc: "Find a peak element in array where element is strictly greater than neighbors.", approach: "Binary search comparing mid element with mid + 1.", time: "O(log N)", space: "O(1)", leetcode: "https://leetcode.com/problems/find-peak-element/", lcName: "LeetCode 162: Find Peak Element", platform: "LeetCode" },
+            { id: 45, title: "House Robber", difficulty: "Medium", roles: ["DSE", "SP"], topic: "Dynamic Programming", history: "Infosys DSE Drive 2025", desc: "Maximize storable wealth from non-adjacent houses.", approach: "1D DP: dp[i] = max(dp[i-1], dp[i-2] + nums[i]).", time: "O(N)", space: "O(1)", leetcode: "https://leetcode.com/problems/house-robber/", lcName: "LeetCode 198: House Robber", platform: "LeetCode" },
+            { id: 46, title: "Sort Colors (Dutch National Flag)", difficulty: "Medium", roles: ["DSE", "SP"], topic: "Two Pointers & Sliding Window", history: "DSE, SP Drive", desc: "Sort array of 0s, 1s, and 2s in single pass.", approach: "Three-pointer partition (low, mid, high).", time: "O(N)", space: "O(1)", leetcode: "https://leetcode.com/problems/sort-colors/", lcName: "LeetCode 75: Sort Colors", platform: "LeetCode" },
+            { id: 47, title: "Top K Frequent Elements", difficulty: "Medium", roles: ["DSE", "SP"], topic: "Arrays & Hashing", history: "DSE, SP Drive", desc: "Find K most frequent elements in an array.", approach: "Min-heap or bucket sort.", time: "O(N log K)", space: "O(N)", leetcode: "https://leetcode.com/problems/top-k-frequent-elements/", lcName: "LeetCode 347: Top K Frequent Elements", platform: "LeetCode" },
+            { id: 48, title: "Search in Rotated Sorted Array", difficulty: "Medium", roles: ["DSE", "SP"], topic: "Greedy & Searching", history: "DSE, SP Drive", desc: "Find target in rotated sorted array in O(log N) time.", approach: "Modified binary search determining sorted side.", time: "O(log N)", space: "O(1)", leetcode: "https://leetcode.com/problems/search-in-rotated-sorted-array/", lcName: "LeetCode 33: Search in Rotated Sorted Array", platform: "LeetCode" },
+            { id: 49, title: "Rotting Oranges", difficulty: "Medium", roles: ["DSE", "SP"], topic: "Trees & Graphs", history: "DSE, SP Drive", desc: "Calculate minimum time required to rot all fresh oranges in grid.", approach: "Multi-source BFS using queue.", time: "O(R * C)", space: "O(R * C)", leetcode: "https://leetcode.com/problems/rotting-oranges/", lcName: "LeetCode 994: Rotting Oranges", platform: "LeetCode" },
+            { id: 50, title: "Binary Tree Zigzag Level Order Traversal", difficulty: "Medium", roles: ["DSE", "SP"], topic: "Trees & Graphs", history: "DSE Drive", desc: "Return level order traversal alternating left-to-right and right-to-left.", approach: "BFS with level deque flag.", time: "O(N)", space: "O(N)", leetcode: "https://leetcode.com/problems/binary-tree-zigzag-level-order-traversal/", lcName: "LeetCode 103: Zigzag Level Order Traversal", platform: "LeetCode" },
+            { id: 51, title: "Min Stack Implementation", difficulty: "Medium", roles: ["DSE"], topic: "Arrays & Hashing", history: "DSE Drive", desc: "Design stack supporting min element lookup in O(1) time.", approach: "Dual stack or pair stack.", time: "O(1)", space: "O(N)", leetcode: "https://leetcode.com/problems/min-stack/", lcName: "LeetCode 155: Min Stack", platform: "LeetCode" },
+            { id: 52, title: "Subsets (Power Set Generation)", difficulty: "Medium", roles: ["DSE", "SP"], topic: "Arrays & Hashing", history: "DSE, SP Drive", desc: "Return all possible subsets (power set) of unique integers.", approach: "Backtracking or bitmask iteration.", time: "O(N * 2^N)", space: "O(N)", leetcode: "https://leetcode.com/problems/subsets/", lcName: "LeetCode 78: Subsets", platform: "LeetCode" },
+            { id: 53, title: "Group Anagrams", difficulty: "Medium", roles: ["DSE"], topic: "Strings & Text Processing", history: "DSE Drive", desc: "Group array of strings into anagram sets.", approach: "Hash map with character frequency count as key.", time: "O(N * L)", space: "O(N * L)", leetcode: "https://leetcode.com/problems/group-anagrams/", lcName: "LeetCode 49: Group Anagrams", platform: "LeetCode" },
+            { id: 54, title: "Combination Sum", difficulty: "Medium", roles: ["DSE", "SP"], topic: "Dynamic Programming", history: "DSE, SP Drive", desc: "Find all unique combinations summing to target with unlimited element reuse.", approach: "Backtracking DFS.", time: "O(2^T)", space: "O(T)", leetcode: "https://leetcode.com/problems/combination-sum/", lcName: "LeetCode 39: Combination Sum", platform: "LeetCode" },
+            { id: 55, title: "Palindrome Linked List", difficulty: "Medium", roles: ["SE", "DSE"], topic: "Two Pointers & Sliding Window", history: "SE, DSE Drive", desc: "Check if singly linked list is palindrome in O(N) time and O(1) space.", approach: "Fast/slow pointers to find middle, reverse second half, compare.", time: "O(N)", space: "O(1)", leetcode: "https://leetcode.com/problems/palindrome-linked-list/", lcName: "LeetCode 234: Palindrome Linked List", platform: "LeetCode" },
+            { id: 56, title: "Subset Sum Problem", difficulty: "Medium", roles: ["DSE", "SP"], topic: "Dynamic Programming", history: "DSE, SP Drive", desc: "Determine if non-negative integer subset sums to target S.", approach: "1D DP array updated in reverse.", time: "O(N * S)", space: "O(S)", leetcode: "https://www.geeksforgeeks.org/problems/subset-sum-problem1611/1", lcName: "GeeksforGeeks: Subset Sum Problem", platform: "GeeksforGeeks" },
+            { id: 57, title: "Implement Trie (Prefix Tree)", difficulty: "Medium", roles: ["SP"], topic: "Bit Manipulation & Tries", history: "SP Drive", desc: "Implement prefix tree with insert, search, and startsWith.", approach: "TrieNode array of size 26.", time: "O(L)", space: "O(Alphabet * L * N)", leetcode: "https://leetcode.com/problems/implement-trie-prefix-tree/", lcName: "LeetCode 208: Implement Trie", platform: "LeetCode" },
+            { id: 58, title: "LRU Cache Design", difficulty: "Medium", roles: ["SP"], topic: "Arrays & Hashing", history: "SP Drive", desc: "Design Least Recently Used (LRU) cache with O(1) get and put.", approach: "Hash map + Doubly Linked List.", time: "O(1)", space: "O(Capacity)", leetcode: "https://leetcode.com/problems/lru-cache/", lcName: "LeetCode 146: LRU Cache", platform: "LeetCode" },
+            { id: 59, title: "Reverse Stack Using Recursion", difficulty: "Medium", roles: ["DSE"], topic: "Arrays & Hashing", history: "DSE Drive", desc: "Reverse stack without extra loops.", approach: "Pop elements recursively, insert at bottom.", time: "O(N^2)", space: "O(N)", leetcode: "https://www.geeksforgeeks.org/problems/reverse-a-stack/1", lcName: "GeeksforGeeks: Reverse a Stack", platform: "GeeksforGeeks" },
+            { id: 60, title: "RPG Monster Defeat (Greedy Experience Scaling)", difficulty: "Medium", roles: ["DSE", "SP"], topic: "Greedy & Searching", history: "Infosys Campus 2025", desc: "Defeating monster i grants bonus experience. Maximize defeated count.", approach: "Sort monsters by power requirement, greedily defeat.", time: "O(N log N)", space: "O(1)", leetcode: "https://leetcode.com/problems/maximum-matching-of-players-with-trainers/", lcName: "LeetCode 2410: Max Matching", platform: "LeetCode" },
+            { id: 61, title: "Gala and Pious Magical Vine Pattern", difficulty: "Medium", roles: ["SP"], topic: "Strings & Text Processing", history: "Infosys SP Drive", desc: "Count prefixes decomposable into periodic string patterns.", approach: "KMP pi-table pattern analysis.", time: "O(N)", space: "O(N)", leetcode: "https://leetcode.com/problems/longest-happy-prefix/", lcName: "LeetCode 1392: Longest Happy Prefix", platform: "LeetCode" },
+            { id: 62, title: "Subsegment Product Factor Constraints", difficulty: "Medium", roles: ["SP"], topic: "Math & Number Theory", history: "Infosys SP Drive", desc: "Partition A into subsegments whose product has >= X distinct prime factors.", approach: "Sieve prime factorization + sliding window.", time: "O(N log(max A))", space: "O(N)", leetcode: "https://leetcode.com/problems/distinct-prime-factors-of-product-of-array/", lcName: "LeetCode 2521: Distinct Prime Factors", platform: "LeetCode" },
+            { id: 63, title: "Binary Strings Without K Consecutive 1s", difficulty: "Medium", roles: ["SP"], topic: "Dynamic Programming", history: "Infosys OA Slot 1", desc: "Count binary strings of length N avoiding K consecutive 1s.", approach: "DP tracking consecutive 1 count.", time: "O(N * K)", space: "O(K)", leetcode: "https://leetcode.com/problems/non-negative-integers-without-consecutive-ones/", lcName: "LeetCode 600: Integers without Consecutive Ones", platform: "LeetCode" },
+            { id: 64, title: "Array Score Maximization with Parity Jump", difficulty: "Medium", roles: ["SP"], topic: "Dynamic Programming", history: "Infosys SP OA", desc: "Selecting index i jumps based on parity. Maximize total score.", approach: "2D parity state DP.", time: "O(N)", space: "O(N)", leetcode: "https://leetcode.com/problems/jump-game-ii/", lcName: "LeetCode 45: Jump Game II", platform: "LeetCode" },
+            { id: 65, title: "K-Perfectly Even Arrays", difficulty: "Medium", roles: ["DSE", "SP"], topic: "Math & Number Theory", history: "Infosys DSE OA", desc: "Count arrays of size N with K adjacent pairs satisfying parity products.", approach: "State DP transition.", time: "O(N * K)", space: "O(K)", leetcode: "https://leetcode.com/problems/minimum-absolute-difference/", lcName: "LeetCode 1200: Min Absolute Difference", platform: "LeetCode" },
+            { id: 66, title: "Coin Change (Fewest Coins)", difficulty: "Medium", roles: ["DSE", "SP"], topic: "Dynamic Programming", history: "DSE, SP Drive", desc: "Find fewest coins needed to make amount A.", approach: "Bottom-up 1D DP.", time: "O(N * A)", space: "O(A)", leetcode: "https://leetcode.com/problems/coin-change/", lcName: "LeetCode 322: Coin Change", platform: "LeetCode" },
+            { id: 67, title: "Edit Distance", difficulty: "Medium", roles: ["DSE", "SP"], topic: "Dynamic Programming", history: "DSE, SP Drive", desc: "Min edit operations (insert, delete, replace) to convert word1 to word2.", approach: "2D DP Levenshtein distance table.", time: "O(M * N)", space: "O(M * N)", leetcode: "https://leetcode.com/problems/edit-distance/", lcName: "LeetCode 72: Edit Distance", platform: "LeetCode" },
+            { id: 68, title: "0/1 Knapsack Problem", difficulty: "Medium", roles: ["DSE", "SP"], topic: "Dynamic Programming", history: "DSE, SP Drive", desc: "Maximize value without exceeding weight W.", approach: "1D DP array updated backwards.", time: "O(N * W)", space: "O(W)", leetcode: "https://www.geeksforgeeks.org/problems/0-1-knapsack-problem0917/1", lcName: "GeeksforGeeks: 0/1 Knapsack", platform: "GeeksforGeeks" },
+            { id: 69, title: "Word Break", difficulty: "Medium", roles: ["DSE", "SP"], topic: "Dynamic Programming", history: "DSE, SP Drive", desc: "Check if string S can be segmented into space-separated dictionary words.", approach: "1D Boolean DP array.", time: "O(N^2)", space: "O(N)", leetcode: "https://leetcode.com/problems/word-break/", lcName: "LeetCode 139: Word Break", platform: "LeetCode" },
+            { id: 70, title: "Longest Increasing Subsequence", difficulty: "Medium", roles: ["DSE", "SP"], topic: "Dynamic Programming", history: "DSE, SP Drive", desc: "Find length of longest strictly increasing subsequence.", approach: "DP + Binary Search (Patience Sorting).", time: "O(N log N)", space: "O(N)", leetcode: "https://leetcode.com/problems/longest-increasing-subsequence/", lcName: "LeetCode 300: LIS", platform: "LeetCode" },
+            { id: 71, title: "Lowest Common Ancestor of a BST", difficulty: "Medium", roles: ["DSE"], topic: "Trees & Graphs", history: "DSE Drive", desc: "Find LCA node of two given nodes p and q in BST.", approach: "BST traversal comparing values p, q with root.", time: "O(H)", space: "O(1)", leetcode: "https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-search-tree/", lcName: "LeetCode 235: LCA in BST", platform: "LeetCode" },
+            { id: 72, title: "Binary Tree Right Side View", difficulty: "Medium", roles: ["DSE", "SP"], topic: "Trees & Graphs", history: "DSE Drive", desc: "Return values of nodes visible when standing on right side of tree.", approach: "BFS level-order taking last element of each level.", time: "O(N)", space: "O(D)", leetcode: "https://leetcode.com/problems/binary-tree-right-side-view/", lcName: "LeetCode 199: Binary Tree Right Side View", platform: "LeetCode" },
+            { id: 73, title: "Partition Equal Subset Sum", difficulty: "Medium", roles: ["DSE", "SP"], topic: "Dynamic Programming", history: "DSE, SP Drive", desc: "Partition array into two subsets with equal sum.", approach: "Subset Sum DP targeting total_sum / 2.", time: "O(N * Sum)", space: "O(Sum)", leetcode: "https://leetcode.com/problems/partition-equal-subset-sum/", lcName: "LeetCode 416: Partition Equal Subset Sum", platform: "LeetCode" },
+            { id: 74, title: "Decode Ways", difficulty: "Medium", roles: ["DSE", "SP"], topic: "Dynamic Programming", history: "DSE, SP Drive", desc: "Count total ways to decode a digit string mapped to A-Z.", approach: "1D DP: dp[i] = dp[i-1] (if 1-9) + dp[i-2] (if 10-26).", time: "O(N)", space: "O(1)", leetcode: "https://leetcode.com/problems/decode-ways/", lcName: "LeetCode 91: Decode Ways", platform: "LeetCode" },
+            { id: 75, title: "Unique Paths", difficulty: "Medium", roles: ["DSE"], topic: "Dynamic Programming", history: "DSE Drive", desc: "Find total unique paths from top-left to bottom-right in M x N grid.", approach: "2D DP or Combinatorics C(m+n-2, m-1).", time: "O(M * N)", space: "O(N)", leetcode: "https://leetcode.com/problems/unique-paths/", lcName: "LeetCode 62: Unique Paths", platform: "LeetCode" },
+
+            // HARD PROBLEMS (76 to 105)
+            { id: 76, title: "N-Queens Problem", difficulty: "Hard", roles: ["SP"], topic: "Trees & Graphs", history: "Infosys SP / HackWithInfy", desc: "Place N queens on an N x N chessboard so no two queens attack each other.", approach: "Backtracking placing queens row by row using sets for columns and diagonals.", time: "O(N!)", space: "O(N)", leetcode: "https://leetcode.com/problems/n-queens/", lcName: "LeetCode 51: N-Queens", platform: "LeetCode" },
+            { id: 77, title: "Median of Two Sorted Arrays", difficulty: "Hard", roles: ["SP"], topic: "Greedy & Searching", history: "Infosys SP Track", desc: "Find median of two sorted arrays nums1 and nums2 of sizes M and N.", approach: "Binary search partitioning smaller array into left and right halves.", time: "O(log(min(M, N)))", space: "O(1)", leetcode: "https://leetcode.com/problems/median-of-two-sorted-arrays/", lcName: "LeetCode 4: Median of Two Sorted Arrays", platform: "LeetCode" },
+            { id: 78, title: "Minimum Window Substring", difficulty: "Hard", roles: ["SP"], topic: "Two Pointers & Sliding Window", history: "Infosys SP Track", desc: "Find smallest substring of s containing all characters of string t.", approach: "Sliding window expanding right pointer and contracting left pointer.", time: "O(|S| + |T|)", space: "O(|S| + |T|)", leetcode: "https://leetcode.com/problems/minimum-window-substring/", lcName: "LeetCode 76: Minimum Window Substring", platform: "LeetCode" },
+            { id: 79, title: "Maximal Rectangle", difficulty: "Hard", roles: ["SP"], topic: "Dynamic Programming", history: "Infosys SP Track", desc: "Find largest rectangle containing only 1s in a 2D binary matrix.", approach: "Build row-wise height histogram and solve using Largest Rectangle in Histogram algorithm.", time: "O(R * C)", space: "O(C)", leetcode: "https://leetcode.com/problems/maximal-rectangle/", lcName: "LeetCode 85: Maximal Rectangle", platform: "LeetCode" },
+            { id: 80, title: "Longest Valid Parentheses", difficulty: "Hard", roles: ["SP"], topic: "Strings & Text Processing", history: "Infosys SP Track", desc: "Find length of longest valid (well-formed) parentheses substring.", approach: "Stack storing indices or two-pass left-to-right and right-to-left scan.", time: "O(N)", space: "O(N)", leetcode: "https://leetcode.com/problems/longest-valid-parentheses/", lcName: "LeetCode 32: Longest Valid Parentheses", platform: "LeetCode" },
+            { id: 81, title: "Word Ladder II", difficulty: "Hard", roles: ["SP"], topic: "Trees & Graphs", history: "Infosys SP Track", desc: "Find all shortest transformation sequences from beginWord to endWord.", approach: "BFS to build shortest path graph, followed by backtracking DFS.", time: "O(N * 26^L)", space: "O(N * L)", leetcode: "https://leetcode.com/problems/word-ladder-ii/", lcName: "LeetCode 126: Word Ladder II", platform: "LeetCode" },
+            { id: 82, title: "Palindrome Partitioning II (Min Cuts)", difficulty: "Hard", roles: ["SP"], topic: "Dynamic Programming", history: "Infosys SP Track", desc: "Find minimum cuts needed for palindrome partitioning of string s.", approach: "2D palindrome table preprocessing combined with 1D DP table for minimum cuts.", time: "O(N^2)", space: "O(N^2)", leetcode: "https://leetcode.com/problems/palindrome-partitioning-ii/", lcName: "LeetCode 132: Palindrome Partitioning II", platform: "LeetCode" },
+            { id: 83, title: "Trapping Rain Water", difficulty: "Hard", roles: ["SP"], topic: "Two Pointers & Sliding Window", history: "Infosys SP Track", desc: "Compute trapped rainwater given N height lines.", approach: "Two pointers inward scan.", time: "O(N)", space: "O(1)", leetcode: "https://leetcode.com/problems/trapping-rain-water/", lcName: "LeetCode 42: Trapping Rain Water", platform: "LeetCode" },
+            { id: 84, title: "Split Array Largest Sum", difficulty: "Hard", roles: ["SP"], topic: "Greedy & Searching", history: "SP Drive", desc: "Partition array into K contiguous subarrays minimizing max sum.", approach: "Binary search over max sum answer range with greedy validator.", time: "O(N log(sum))", space: "O(1)", leetcode: "https://leetcode.com/problems/split-array-largest-sum/", lcName: "LeetCode 410: Split Array Largest Sum", platform: "LeetCode" },
+            { id: 85, title: "Reverse Nodes in k-Group", difficulty: "Hard", roles: ["SP"], topic: "Two Pointers & Sliding Window", history: "SP Drive", desc: "Reverse nodes of linked list in blocks of K.", approach: "Iterative sublist reversal in k-blocks.", time: "O(N)", space: "O(1)", leetcode: "https://leetcode.com/problems/reverse-nodes-in-k-group/", lcName: "LeetCode 25: Reverse Nodes in k-Group", platform: "LeetCode" },
+            { id: 86, title: "Maximum Profit in Job Scheduling", difficulty: "Hard", roles: ["SP"], topic: "Dynamic Programming", history: "SP Drive", desc: "Find max profit from non-overlapping jobs.", approach: "Sort jobs by end time, DP + binary search.", time: "O(N log N)", space: "O(N)", leetcode: "https://leetcode.com/problems/maximum-profit-in-job-scheduling/", lcName: "LeetCode 1235: Max Profit Job Scheduling", platform: "LeetCode" },
+            { id: 87, title: "Mountain Array Transformation (Minimum Removals)", difficulty: "Hard", roles: ["SP"], topic: "Dynamic Programming", history: "SP Drive", desc: "Find minimum removals to form a mountain array.", approach: "Compute LIS and LDS at every index.", time: "O(N log N)", space: "O(N)", leetcode: "https://leetcode.com/problems/minimum-number-of-removals-to-make-mountain-array/", lcName: "LeetCode 1671: Min Removals for Mountain Array", platform: "LeetCode" },
+            { id: 88, title: "Minimum Insertions to Make String Palindrome", difficulty: "Hard", roles: ["SP"], topic: "Dynamic Programming", history: "SP Drive", desc: "Find min insertions to transform string into palindrome.", approach: "Length - Longest Palindromic Subsequence.", time: "O(N^2)", space: "O(N^2)", leetcode: "https://leetcode.com/problems/minimum-insertion-steps-to-make-a-string-palindrome/", lcName: "LeetCode 1312: Min Insertions Palindrome", platform: "LeetCode" },
+            { id: 89, title: "Longest Increasing Subsequence with Bitwise Conditions", difficulty: "Hard", roles: ["SP"], topic: "Bit Manipulation & Tries", history: "HackWithInfy", desc: "Find LIS where adjacent elements satisfy bitwise condition.", approach: "DP checking bitwise AND/XOR validity.", time: "O(N^2)", space: "O(N)", leetcode: "https://leetcode.com/problems/longest-increasing-subsequence/", lcName: "LeetCode 300: LIS Bitwise", platform: "LeetCode" },
+            { id: 90, title: "Minimum Inversions via XOR Optimization", difficulty: "Hard", roles: ["SP"], topic: "Bit Manipulation & Tries", history: "HackWithInfy", desc: "Choose B such that transforming A to A[i] ^ B minimizes inversion count.", approach: "Binary Trie bitwise decomposition.", time: "O(30 * N)", space: "O(30 * N)", leetcode: "https://leetcode.com/problems/number-of-good-paths/", lcName: "LeetCode 2421: Min Inversions XOR", platform: "LeetCode" },
+            { id: 91, title: "Ugliness Minimization (Binary Swaps and Bit Flips)", difficulty: "Hard", roles: ["SP"], topic: "Greedy & Searching", history: "SP Drive", desc: "Minimize numeric binary value under cash constraints for swaps/flips.", approach: "Greedy bit selection from MSB.", time: "O(N)", space: "O(N)", leetcode: "https://leetcode.com/problems/minimum-domino-rotations-for-equal-row/", lcName: "LeetCode 1007: Ugliness Minimization", platform: "LeetCode" },
+            { id: 92, title: "Road Terrain Transformation", difficulty: "Hard", roles: ["SP"], topic: "Greedy & Searching", history: "SP Drive", desc: "Minimize maximum difficulty across N segments using budget K operations.", approach: "Binary search on max difficulty with greedy verifier.", time: "O(N log(max A))", space: "O(1)", leetcode: "https://leetcode.com/problems/minimum-number-of-days-to-make-m-bouquets/", lcName: "LeetCode 1482: Road Terrain Transformation", platform: "LeetCode" },
+            { id: 93, title: "Heroes vs Villains (Prefix Sum Matching)", difficulty: "Hard", roles: ["SP"], topic: "Greedy & Searching", history: "HackWithInfy", desc: "Maximize defeated villains where hero defeats villain if distance <= K.", approach: "Sort both arrays and two pointers.", time: "O(N log N)", space: "O(1)", leetcode: "https://leetcode.com/problems/maximum-number-of-tasks-you-can-assign/", lcName: "LeetCode 2071: Heroes vs Villains", platform: "LeetCode" },
+            { id: 94, title: "Minimum Cost K-Partition with Per-Segment Range Cost", difficulty: "Hard", roles: ["SP"], topic: "Dynamic Programming", history: "Infosys OA Slot 1", desc: "Partition A into K segments with range costs (max - min) + |first - last|.", approach: "2D DP tracking prefix partitioning.", time: "O(K * N^2)", space: "O(K * N)", leetcode: "https://leetcode.com/problems/minimum-difficulty-of-a-job-schedule/", lcName: "LeetCode 1335: Min Cost K-Partition", platform: "LeetCode" },
+            { id: 95, title: "Split Array with Minimum Bitwise OR Sum", difficulty: "Hard", roles: ["SP"], topic: "Bit Manipulation & Tries", history: "SP Drive", desc: "Split array into subarrays of length <= M to minimize sum of bitwise ORs.", approach: "1D DP state evaluation.", time: "O(N * M)", space: "O(N)", leetcode: "https://leetcode.com/problems/bitwise-ors-of-subarrays/", lcName: "LeetCode 898: Min Bitwise OR Sum", platform: "LeetCode" },
+            { id: 96, title: "Oracle of Eldoria Prime Connected Components", difficulty: "Hard", roles: ["SP"], topic: "Trees & Graphs", history: "SP OA", desc: "For prime X in [1, N], compute city subsets yielding X connected components.", approach: "Tree DP with Sieve of Eratosthenes.", time: "O(N^2)", space: "O(N)", leetcode: "https://leetcode.com/problems/minimum-fuel-cost-to-report-to-the-capital/", lcName: "LeetCode 2477: Prime Connected Components", platform: "LeetCode" },
+            { id: 97, title: "Subarray MEX Partitioning for Non-Decreasing Sequence", difficulty: "Hard", roles: ["SP"], topic: "Dynamic Programming", history: "Infosys OA", desc: "Partition A into subarrays such that MEX sequence is non-decreasing.", approach: "Monotonic MEX frequency DP.", time: "O(N log N)", space: "O(N)", leetcode: "https://leetcode.com/problems/minimum-number-of-operations-to-make-array-continuous/", lcName: "LeetCode 2009: Subarray MEX Partitioning", platform: "LeetCode" },
+            { id: 98, title: "Array Generation with Alternating GCD and LCM Conditions", difficulty: "Hard", roles: ["SP"], topic: "Math & Number Theory", history: "SP OA", desc: "Count arrays where odd steps have gcd > G and even steps have lcm < L.", approach: "Multi-dimensional state DP.", time: "O(N * M^2)", space: "O(N * M)", leetcode: "https://leetcode.com/problems/the-number-of-good-subsets/", lcName: "LeetCode 1994: Alternating GCD/LCM", platform: "LeetCode" },
+            { id: 99, title: "Dynamic Cyclic Adjacency Graph Path Finding", difficulty: "Hard", roles: ["SP"], topic: "Trees & Graphs", history: "SP OA", desc: "Find paths of length K where moves cyclically shift adjacency matrix rows.", approach: "Layered graph DP across time steps.", time: "O(K * N^2)", space: "O(N)", leetcode: "https://leetcode.com/problems/cheapest-flights-within-k-stops/", lcName: "LeetCode 787: Dynamic Cyclic Graph Path", platform: "LeetCode" },
+            { id: 100, title: "LFU (Least Frequently Used) Cache Implementation", difficulty: "Hard", roles: ["SP"], topic: "Arrays & Hashing", history: "SP Interview", desc: "Construct LFU cache supporting O(1) get and put operations.", approach: "Two hash maps: key to node/frequency, and frequency to doubly linked list.", time: "O(1)", space: "O(Capacity)", leetcode: "https://leetcode.com/problems/lfu-cache/", lcName: "LeetCode 460: LFU Cache", platform: "LeetCode" },
+            { id: 101, title: "Alien Dictionary (Topological Sort in Directed Graph)", difficulty: "Hard", roles: ["SP"], topic: "Trees & Graphs", history: "SP Interview", desc: "Given sorted dictionary of alien language, find character order.", approach: "Build directed graph of character order, run Kahn's Topological Sort.", time: "O(V + E)", space: "O(V + E)", leetcode: "https://www.geeksforgeeks.org/problems/alien-dictionary/1", lcName: "GeeksforGeeks: Alien Dictionary", platform: "GeeksforGeeks" },
+            { id: 102, title: "Merge k Sorted Lists", difficulty: "Hard", roles: ["SP"], topic: "Trees & Graphs", history: "SP Drive", desc: "Merge k sorted linked lists into one sorted list.", approach: "Min-heap storing current node heads.", time: "O(N log k)", space: "O(k)", leetcode: "https://leetcode.com/problems/merge-k-sorted-lists/", lcName: "LeetCode 23: Merge k Sorted Lists", platform: "LeetCode" },
+            { id: 103, title: "Serialize and Deserialize Binary Tree", difficulty: "Hard", roles: ["SP"], topic: "Trees & Graphs", history: "SP Drive", desc: "Design algorithm to serialize binary tree to string and deserialize back.", approach: "Preorder DFS with null delimiters.", time: "O(N)", space: "O(N)", leetcode: "https://leetcode.com/problems/serialize-and-deserialize-binary-tree/", lcName: "LeetCode 297: Serialize/Deserialize Binary Tree", platform: "LeetCode" },
+            { id: 104, title: "Sliding Window Maximum", difficulty: "Hard", roles: ["SP"], topic: "Two Pointers & Sliding Window", history: "SP Drive", desc: "Find maximum in each sliding window of size K.", approach: "Monotonic deque storing indices in decreasing order.", time: "O(N)", space: "O(K)", leetcode: "https://leetcode.com/problems/sliding-window-maximum/", lcName: "LeetCode 239: Sliding Window Maximum", platform: "LeetCode" },
+            { id: 105, title: "Shortest Path in Grid with Obstacles Elimination", difficulty: "Hard", roles: ["SP"], topic: "Trees & Graphs", history: "SP Drive", desc: "Find shortest path from (0,0) to (m-1,n-1) with budget k obstacle eliminations.", approach: "3D BFS tracking (r, c, remaining_k).", time: "O(M * N * K)", space: "O(M * N * K)", leetcode: "https://leetcode.com/problems/shortest-path-in-a-grid-with-obstacles-elimination/", lcName: "LeetCode 1293: Shortest Path with Obstacles", platform: "LeetCode" }
+        ];
+
+        function applyFilters() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            const diff = document.getElementById('difficultyFilter').value;
+            const role = document.getElementById('roleFilter').value;
+            const topic = document.getElementById('topicFilter').value;
+            const platform = document.getElementById('platformFilter').value;
+
+            filteredQuestions = questionsData.filter(q => {
+                const matchesSearch = q.title.toLowerCase().includes(query) ||
+                                      q.desc.toLowerCase().includes(query) ||
+                                      q.approach.toLowerCase().includes(query);
+                const matchesDiff = diff === 'ALL' || q.difficulty === diff;
+                const matchesRole = role === 'ALL' || q.roles.includes(role);
+                const matchesTopic = topic === 'ALL' || q.topic === topic;
+                const matchesPlatform = platform === 'ALL' || (q.platform || 'LeetCode') === platform;
+
+                return matchesSearch && matchesDiff && matchesRole && matchesTopic && matchesPlatform;
+            });
+
+            renderQuestions();
+        }
+
+        function renderQuestions() {
+            const questionGrid = document.getElementById('questionGrid');
+            const resultsCount = document.getElementById('resultsCount');
+            if (!questionGrid) return;
+            questionGrid.innerHTML = '';
+            resultsCount.textContent = `Showing ${filteredQuestions.length} of ${questionsData.length} Questions`;
+
+            filteredQuestions.forEach(q => {
+                const isSolved = solvedSet.has(q.id);
+                const diffBadgeClass = q.difficulty === 'Easy' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
+                                       q.difficulty === 'Medium' ? 'bg-amber-100 text-amber-800 border-amber-200' :
+                                       'bg-rose-100 text-rose-800 border-rose-200';
+
+                const card = document.createElement('div');
+                card.className = `bg-white border ${isSolved ? 'border-emerald-400 ring-1 ring-emerald-300' : 'border-slate-200'} rounded-xl p-4 flex flex-col justify-between hover:shadow-md transition group relative overflow-hidden`;
+                card.innerHTML = `
+                    ${isSolved ? '<div class="absolute top-0 right-0 bg-emerald-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-bl shadow"><i class="fa-solid fa-check mr-1"></i>SOLVED</div>' : ''}
+                    <div>
+                        <div class="flex justify-between items-start gap-2 mb-2 ${isSolved ? 'pr-12' : ''}">
+                            <span class="text-xs font-extrabold text-slate-400">#${q.id}</span>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${diffBadgeClass}">${q.difficulty}</span>
+                        </div>
+                        <h4 class="font-bold text-slate-900 text-sm group-hover:text-blue-600 transition line-clamp-2 mb-1">${q.title}</h4>
+                        <p class="text-[11px] text-slate-500 mb-3">${q.topic}</p>
+                        <p class="text-xs text-slate-600 line-clamp-2 mb-3 leading-relaxed">${q.desc}</p>
+                    </div>
+                    <div class="pt-3 border-t border-slate-100 space-y-2">
+                        <div class="flex items-center justify-between text-[11px] text-slate-500">
+                            <span><i class="fa-solid fa-layer-group text-slate-400 mr-1"></i> ${q.roles.join(', ')}</span>
+                            <span class="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-700">${q.time}</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="toggleSolved(${q.id}, event)" class="${isSolved ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'} p-1.5 rounded-lg text-xs font-semibold transition px-2.5">
+                                <i class="fa-solid ${isSolved ? 'fa-circle-check text-emerald-600' : 'fa-circle-notch text-slate-400'}"></i>
+                            </button>
+                            <button onclick="openModal(${q.id})" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-1.5 rounded-lg text-xs font-semibold transition">
+                                Approach Detail
+                            </button>
+                        </div>
+                    </div>
+                `;
+                questionGrid.appendChild(card);
+            });
+        }
+
+        function openModal(id) {
+            const q = questionsData.find(item => item.id === id);
+            if (!q) return;
+
+            currentActiveModalId = id;
+            document.getElementById('modalNumber').textContent = `Question #${q.id}`;
+            document.getElementById('modalTitle').textContent = q.title;
+            document.getElementById('modalSubtitle').textContent = `${q.topic} • ${q.difficulty} Tier`;
+            document.getElementById('modalHistory').textContent = q.history;
+            document.getElementById('modalDescription').textContent = q.desc;
+            document.getElementById('modalApproach').textContent = q.approach;
+            document.getElementById('modalTimeComp').textContent = q.time;
+            document.getElementById('modalSpaceComp').textContent = q.space;
+
+            switchModalTab('overview');
+            document.getElementById('problemModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('problemModal').classList.add('hidden');
+            currentActiveModalId = null;
+        }
+
+        function switchModalTab(tabName) {
+            const tabs = ['overview', 'aicode', 'review', 'testcases'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`modalTab${t.charAt(0).toUpperCase() + t.slice(1)}Btn`);
+                const content = document.getElementById(`modalTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
+                if (btn) btn.classList.remove('border-b-2', 'border-blue-600', 'text-blue-600');
+                if (btn) btn.classList.add('text-slate-500');
+                if (content) content.classList.add('hidden');
+            });
+
+            const activeBtn = document.getElementById(`modalTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}Btn`);
+            const activeContent = document.getElementById(`modalTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('text-slate-500');
+                activeBtn.classList.add('border-b-2', 'border-blue-600', 'text-blue-600');
+            }
+            if (activeContent) activeContent.classList.remove('hidden');
+        }
+
+        function toggleSolved(id, event) {
+            if (event) event.stopPropagation();
+            if (solvedSet.has(id)) {
+                solvedSet.delete(id);
+            } else {
+                solvedSet.add(id);
+            }
+            updateProgressMetrics();
+            renderQuestions();
+        }
+
+        function updateProgressMetrics() {
+            const count = solvedSet.size;
+            const total = questionsData.length || 1;
+            const percent = Math.round((count / total) * 100);
+            
+            document.getElementById('navProgressCount').textContent = `${count} / ${questionsData.length} Solved`;
+            document.getElementById('progressPercentText').textContent = `${percent}% Completed (${count}/${questionsData.length})`;
+            document.getElementById('progressBarFill').style.width = `${percent}%`;
+        }
+
+        function switchCsTab(category, element = null) {
+            const tabs = document.querySelectorAll('.cs-tab');
+            tabs.forEach(t => {
+                t.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
+                t.classList.add('text-slate-500');
+            });
+
+            if (element && element.classList) {
+                element.classList.remove('text-slate-500');
+                element.classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
+            }
+
+            const container = document.getElementById('csTabContent');
+            if (!container) return;
+
+            const csBank = {
+                oop: [{ q: "What is the Diamond Problem in C++?", a: "Multiple inheritance ambiguity when two parent classes inherit from the same base class." }],
+                dbms: [{ q: "What is RANK vs DENSE_RANK?", a: "RANK skips ranking numbers after ties; DENSE_RANK leaves no gaps." }],
+                os: [{ q: "What are Coffman conditions?", a: "Mutual Exclusion, Hold and Wait, No Preemption, and Circular Wait." }],
+                puzzles: [{ q: "Measure 4L with 8L, 5L, and 3L jugs?", a: "Fill 5L, pour into 3L, leave 2L in 5L jug. Transfer to 3L jug..." }]
+            };
+
+            const items = csBank[category] || [];
+            container.innerHTML = items.map((item, idx) => `
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
+                    <h4 class="font-bold text-slate-900 text-sm flex items-start gap-2">
+                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded font-mono">Q${idx+1}</span>
+                        <span>${escapeHtml(item.q)}</span>
+                    </h4>
+                    <p class="text-xs text-slate-600 leading-relaxed pl-8 border-l-2 border-blue-400">
+                        ${escapeHtml(item.a)}
+                    </p>
+                </div>
+            `).join('');
+        }
+
+        function toggleChatDrawer() {
+            const drawer = document.getElementById('chatDrawer');
+            drawer.classList.toggle('hidden');
+        }
+
+        function sendQuickPrompt(promptText) {
+            document.getElementById('chatInput').value = promptText;
+            sendChatMessage();
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const userMsg = input.value.trim();
+            if (!userMsg) return;
+
+            appendMessage('user', userMsg);
+            input.value = '';
+
+            const container = document.getElementById('chatMessages');
+            let replyText = `I am your dynamic <strong>Infosys Placement Companion</strong>! Ask me for code, logic, or say <em>"Finished Q25"</em> to mark questions as solved!`;
+
+            const msgDiv = document.createElement('div');
+            msgDiv.className = "flex items-start gap-2";
+            msgDiv.innerHTML = `
+                <div class="w-6 h-6 rounded bg-blue-600 text-white flex items-center justify-center text-xs shrink-0 font-bold">AI</div>
+                <div class="bg-white p-3 rounded-2xl rounded-tl-none border border-slate-200 text-slate-700 shadow-sm leading-relaxed max-w-[85%] font-sans">
+                    ${replyText}
+                </div>
+            `;
+            container.appendChild(msgDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function appendMessage(sender, text) {
+            const container = document.getElementById('chatMessages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = "flex items-start gap-2";
+            if (sender === 'user') {
+                msgDiv.innerHTML = `<div class="bg-blue-600 text-white p-3 rounded-2xl rounded-tr-none text-xs ml-auto shadow-sm max-w-[85%] leading-relaxed">${escapeHtml(text)}</div>`;
+            } else {
+                msgDiv.innerHTML = `<div class="w-6 h-6 rounded bg-blue-600 text-white flex items-center justify-center text-xs shrink-0 font-bold">AI</div><div class="bg-white p-3 rounded-2xl rounded-tl-none border border-slate-200 text-slate-700 shadow-sm leading-relaxed max-w-[85%] font-sans">${text}</div>`;
+            }
+            container.appendChild(msgDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function escapeHtml(str) {
+            return (str || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        window.handleSignIn = handleSignIn;
+        window.handleSignUp = handleSignUp;
+        window.redirectToSignUp = redirectToSignUp;
+        window.switchAuthTab = switchAuthTab;
+        window.signOutCandidate = signOutCandidate;
+        window.startInteractiveTour = startInteractiveTour;
+        window.dismissInteractiveTour = dismissInteractiveTour;
+        window.nextTourStep = nextTourStep;
+        window.prevTourStep = prevTourStep;
+        window.dismissLatestUpdatesBox = dismissLatestUpdatesBox;
+        window.reopenLatestUpdatesBox = reopenLatestUpdatesBox;
+        window.switchUpdatesTab = switchUpdatesTab;
+        window.dockUpdateToFooter = dockUpdateToFooter;
+        window.reopenUpdateBoxFromDock = reopenUpdateBoxFromDock;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            filteredQuestions = [...questionsData];
+            renderQuestions();
+            switchCsTab('oop');
+            updateEngineStatusUI();
+            initRealtimeUpdatesListener();
+
+            document.getElementById('searchInput')?.addEventListener('input', applyFilters);
+            document.getElementById('difficultyFilter')?.addEventListener('change', applyFilters);
+            document.getElementById('roleFilter')?.addEventListener('change', applyFilters);
+            document.getElementById('topicFilter')?.addEventListener('change', applyFilters);
+            document.getElementById('platformFilter')?.addEventListener('change', applyFilters);
+
+            window.addEventListener('scroll', updateTourPosition, { passive: true });
+            window.addEventListener('resize', updateTourPosition, { passive: true });
+
+            if (currentRegNo) {
+                await loadCandidateProfile(currentRegNo);
+            } else {
+                showAuthModal();
+            }
+        });
+    </script>
+</body>
+</html>
