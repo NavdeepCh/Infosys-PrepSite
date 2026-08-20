@@ -1,0 +1,19 @@
+name = "test-repo"
+main = "worker.js"
+compatibility_date = "2026-08-20"
+
+# Workers AI binding — lets the worker call env.AI.run(...)
+[ai]
+binding = "AI"
+
+# KV namespace for rate limiting + usage telemetry.
+# Replace "id" below with the id printed by:
+#   wrangler kv namespace create RATE_LIMIT_KV
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "8b3add77b2d445e6a0535848a1a95330"
+
+# Optional: only needed if you build out the /api/admin/* routes later.
+# Set with: wrangler secret put ADMIN_TOKEN
+# [vars]
+# (non-secret vars go here if you add any later)
