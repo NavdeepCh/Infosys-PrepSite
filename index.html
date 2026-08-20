@@ -267,8 +267,8 @@
                                 <i class="fa-solid fa-earth-americas text-emerald-600 w-4"></i> Live Intel
                             </button>
                             <div class="border-t border-slate-100 my-1"></div>
-                            <button onclick="openApiKeyModal(); hideAiToolsDropdown();" class="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-amber-600 flex items-center gap-2">
-                                <i class="fa-solid fa-key text-amber-500 w-4"></i> Gemini API Key
+                            <button onclick="openWorkerConfigModal(); hideAiToolsDropdown();" class="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-orange-600 flex items-center gap-2">
+                                <i class="fa-solid fa-cloud text-orange-500 w-4"></i> Worker AI Gateway Status
                             </button>
                         </div>
                     </div>
@@ -392,10 +392,13 @@
                     <p class="text-3xl font-black text-amber-400 mt-1">₹3.6 - 21L</p>
                     <p class="text-xs text-slate-400 mt-1">LPA across roles</p>
                 </div>
-                <div class="bg-white/5 p-4 rounded-xl border border-white/10 backdrop-blur-sm cursor-pointer hover:bg-white/10 transition" onclick="openApiKeyModal()">
-                    <p class="text-xs text-slate-400 font-medium uppercase">Gemini AI Engine</p>
-                    <p id="heroAiStatusText" class="text-2xl font-black text-purple-400 mt-1">Direct API</p>
-                    <p class="text-xs text-slate-400 mt-1">Click to Configure Key</p>
+                <div class="bg-white/5 p-4 rounded-xl border border-white/10 backdrop-blur-sm cursor-pointer hover:bg-white/10 transition" onclick="openWorkerConfigModal()">
+                    <p class="text-xs text-slate-400 font-medium uppercase">AI Gateway</p>
+                    <p id="heroAiStatusText" class="text-2xl font-black text-orange-400 mt-1">CF Workers AI</p>
+                    <p id="heroAiStatusSub" class="text-xs text-slate-400 mt-1 flex items-center gap-1.5">
+                        <span id="workerConnDot" class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
+                        <span id="workerConnLabel">Checking connection&hellip;</span>
+                    </p>
                 </div>
             </div>
         </section>
@@ -764,7 +767,7 @@
                     <div class="bg-purple-50 border border-purple-200 p-3 rounded-xl flex items-center justify-between">
                         <div>
                             <h4 class="font-bold text-purple-900 text-xs">Generate Optimal Code Solution</h4>
-                            <p class="text-[11px] text-purple-700">Generates clean, well-commented code via Gemini API.</p>
+                            <p class="text-[11px] text-purple-700">Generates clean, well-commented code via Cloudflare Workers AI (server-side).</p>
                         </div>
                         <div class="flex items-center gap-2">
                             <select id="aiCodeLangSelect" class="bg-white border border-purple-300 text-purple-900 text-xs font-semibold px-2 py-1 rounded-lg">
@@ -820,33 +823,54 @@
         </div>
     </div>
 
-    <!-- Gemini API Key Modal -->
-    <div id="apiKeyModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden modal-backdrop">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4" onclick="event.stopPropagation()">
+    <!-- Cloudflare Workers AI Gateway Status & Config Modal -->
+    <div id="workerConfigModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden modal-backdrop">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4" onclick="event.stopPropagation()">
             <div class="flex justify-between items-center border-b border-slate-200 pb-3">
                 <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
-                    <i class="fa-solid fa-key text-amber-500"></i> Google Gemini API Key Required
+                    <i class="fa-solid fa-cloud text-orange-500"></i> Cloudflare Workers AI Gateway Status
                 </h3>
-                <button onclick="closeApiKeyModal()" class="text-slate-400 hover:text-slate-600 font-bold">&times;</button>
+                <button onclick="closeWorkerConfigModal()" class="text-slate-400 hover:text-slate-600 font-bold">&times;</button>
             </div>
-            <p class="text-xs text-slate-600 leading-relaxed">
-                Please enter your Google Gemini API key to activate live reasoning, automated code generation, voice mentorship, and live interviews. Get your free key at <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-blue-600 underline font-semibold">Google AI Studio</a>.
-            </p>
-            <div>
-                <label class="block text-xs font-semibold text-slate-700 mb-1">Gemini API Key (Saved in browser memory)</label>
-                <div class="relative">
-                    <input type="password" id="geminiApiKeyInput" placeholder="AIzaSy..." class="w-full bg-slate-50 border border-slate-300 rounded-lg pl-3 pr-10 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono">
-                    <button type="button" onclick="toggleApiKeyVisibility()" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs">
-                        <i id="apiKeyEyeIcon" class="fa-solid fa-eye"></i>
-                    </button>
+
+            <div class="bg-orange-50 border border-orange-200 p-3.5 rounded-xl text-xs text-orange-950 space-y-2">
+                <p class="font-bold flex items-center gap-1.5">
+                    <i class="fa-solid fa-shield-halved text-orange-600"></i> Server-Side Security Architecture Active
+                </p>
+                <p class="text-[11px] text-orange-900 leading-relaxed">
+                    All AI requests are authorized and routed through a Cloudflare Worker gateway. You never enter an API key in this browser &mdash; the Worker holds the credentials and enforces rate limits.
+                </p>
+            </div>
+
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Worker Endpoint Gateway URL <span class="font-normal text-slate-400">(developer/admin only)</span></label>
+                    <input type="text" id="workerEndpointInput" placeholder="https://test-repo.navadeepch2005.workers.dev" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-mono">
+                    <div class="flex items-center justify-between mt-2 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2">
+                        <span id="modalConnStatus" class="flex items-center gap-1.5 font-medium text-slate-500">
+                            <span id="modalConnDot" class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                            <span id="modalConnLabel">Not checked yet</span>
+                        </span>
+                        <button onclick="testWorkerConnection()" id="testConnBtn" type="button" class="flex items-center gap-1.5 text-[11px] font-bold text-orange-700 hover:text-orange-800 bg-orange-50 hover:bg-orange-100 border border-orange-200 px-2.5 py-1 rounded-md transition">
+                            <i class="fa-solid fa-satellite-dish"></i> Test Connection
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Feature &rarr; Model Bindings</label>
+                    <div class="bg-slate-900 text-slate-300 p-3 rounded-lg font-mono text-[11px] space-y-1">
+                        <p>&bull; solve / review / edge-cases: <span class="text-emerald-400">@cf/meta/llama-3.1-8b-instruct-fast</span></p>
+                        <p>&bull; quiz / flashcards: <span class="text-emerald-400">@cf/meta/llama-3.1-8b-instruct-fast</span></p>
+                        <p>&bull; interview: <span class="text-emerald-400">@cf/meta/llama-3.1-8b-instruct-fast</span></p>
+                    </div>
                 </div>
             </div>
-            <div class="flex justify-between items-center pt-2">
-                <button onclick="clearApiKey()" class="text-xs text-rose-600 hover:underline font-semibold">Clear Key</button>
-                <div class="flex gap-2">
-                    <button onclick="closeApiKeyModal()" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 text-xs font-semibold">Cancel</button>
-                    <button onclick="saveApiKey()" class="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition">Save & Activate</button>
-                </div>
+
+            <div class="flex justify-between items-center pt-2 border-t border-slate-200">
+                <span class="text-[11px] text-slate-500">Rate Limiting: <strong class="text-emerald-600">Enforced at Worker Boundary</strong></span>
+                <button onclick="saveWorkerEndpointConfig()" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-xs font-bold transition">
+                    Save Gateway Endpoint
+                </button>
             </div>
         </div>
     </div>
@@ -877,7 +901,7 @@
                     <button onclick="toggleAddQuizForm()" class="bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1.5 rounded-lg font-bold text-xs transition flex items-center gap-1">
                         <i class="fa-solid fa-plus text-[10px]"></i> Add Question
                     </button>
-                    <button onclick="triggerAiQuizGeneration()" class="bg-purple-600 hover:bg-purple-700 text-white px-2.5 py-1.5 rounded-lg font-bold text-xs transition flex items-center gap-1">
+                    <button id="aiQuizGenBtn" onclick="triggerAiQuizGeneration()" class="bg-purple-600 hover:bg-purple-700 text-white px-2.5 py-1.5 rounded-lg font-bold text-xs transition flex items-center gap-1 disabled:opacity-60 disabled:cursor-not-allowed">
                         <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i> AI Quiz
                     </button>
                 </div>
@@ -961,7 +985,7 @@
                     <button onclick="toggleAddFlashcardForm()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-2 py-1 rounded-lg text-xs transition flex items-center gap-1 shrink-0">
                         <i class="fa-solid fa-plus text-[10px]"></i> Add Card
                     </button>
-                    <button onclick="triggerAiFlashcardsGeneration()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold px-2.5 py-1 rounded-lg text-xs transition flex items-center gap-1 shrink-0">
+                    <button id="aiFlashcardGenBtn" onclick="triggerAiFlashcardsGeneration()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold px-2.5 py-1 rounded-lg text-xs transition flex items-center gap-1 shrink-0 disabled:opacity-60 disabled:cursor-not-allowed">
                         <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i> AI Deck
                     </button>
                 </div>
@@ -1190,7 +1214,7 @@
                     <div>
                         <div class="flex items-center gap-1.5">
                             <h4 class="font-bold text-sm leading-tight">InfyTrack AI Bot</h4>
-                            <span id="engineBadge" class="bg-amber-500/30 text-amber-300 border border-amber-400/30 text-[9px] px-1.5 py-0.2 rounded font-mono">HYBRID AI</span>
+                            <span id="engineBadge" class="bg-orange-500/30 text-orange-300 border border-orange-400/30 text-[9px] px-1.5 py-0.2 rounded font-mono">CF WORKERS AI</span>
                         </div>
                         <p class="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Ask code, logic & update solved status
@@ -1198,8 +1222,8 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button onclick="openApiKeyModal()" title="Configure Gemini API Key" class="text-slate-400 hover:text-amber-300 text-xs p-1">
-                        <i class="fa-solid fa-key"></i>
+                    <button onclick="openWorkerConfigModal()" title="AI Gateway Status" class="text-slate-400 hover:text-orange-300 text-xs p-1">
+                        <i class="fa-solid fa-cloud"></i>
                     </button>
                     <button onclick="toggleChatDrawer()" class="text-slate-400 hover:text-white text-lg font-bold p-1">&times;</button>
                 </div>
@@ -1373,7 +1397,7 @@
         let solvedSet = new Set();
         let filteredQuestions = [...questionsData];
         let currentActiveModalId = null;
-        let geminiApiKey = localStorage.getItem('infosys_gemini_key') || '';
+        let workerGatewayEndpoint = localStorage.getItem('infosys_worker_endpoint') || 'https://test-repo.navadeepch2005.workers.dev';
         let topicChartInstance = null;
 
         let allPublishedUpdates = [];
@@ -1383,7 +1407,7 @@
         const tourSteps = [
             { targetId: 'userProfileBadge', fallbackId: 'authModal', title: 'Candidate Profile ID', desc: 'Your 10-character Registration Number uniquely restores your preparation stats across devices.' },
             { targetId: 'tourAiToolsHub', fallbackId: 'overview', title: 'AI Tools Hub', desc: 'Click to launch Quizie Engine, Resume Matcher, 1:1 Live AI Interview, Exam Simulator, and Flashcards.' },
-            { targetId: 'heroAiStatusText', fallbackId: 'overview', title: 'Gemini AI API Key', desc: 'Configure your free Google Gemini key to activate live reasoning, automated code generation, and voice walkthroughs.' },
+            { targetId: 'heroAiStatusText', fallbackId: 'overview', title: 'Cloudflare Workers AI Gateway', desc: 'A server-side Worker gateway powers live reasoning, code generation, and mock interviews &mdash; no API key needed in your browser.' },
             { targetId: 'tourProgressBar', fallbackId: 'overview', title: 'Preparation Tracker', desc: 'Tracks your completed coding questions across SE, DSE, and SP hiring tracks.' },
             { targetId: 'chatToggleBtn', fallbackId: 'overview', title: '24/7 Floating AI Assistant', desc: 'Ask code questions or say "Finished Q5" anytime to mark problems solved.' }
         ];
@@ -1508,79 +1532,106 @@
             }, 4000);
         }
 
-        function ensureApiKey() {
-            if (!geminiApiKey) {
-                openApiKeyModal();
-                showToast("Gemini API Key Required! Enter your key to activate live reasoning.", "warning");
+        // Replaces the old client-side ensureApiKey() guard. The Worker is the
+        // authoritative security boundary; the frontend only checks that the
+        // candidate is authenticated before dispatching an AI request.
+        function ensureAiWorkerAccess() {
+            if (!currentRegNo) {
+                showAuthModal();
+                showToast("Sign in with your Registration Number to use AI features.", "warning");
                 return false;
             }
             return true;
         }
 
-        function getApiKey() { return geminiApiKey || ""; }
-
-        function openApiKeyModal() {
-            const input = document.getElementById('geminiApiKeyInput');
-            if (input) input.value = geminiApiKey;
-            const modal = document.getElementById('apiKeyModal');
+        function openWorkerConfigModal() {
+            const input = document.getElementById('workerEndpointInput');
+            if (input) input.value = workerGatewayEndpoint;
+            const modal = document.getElementById('workerConfigModal');
             if (modal) modal.classList.remove('hidden');
         }
 
-        function closeApiKeyModal() {
-            const modal = document.getElementById('apiKeyModal');
+        function closeWorkerConfigModal() {
+            const modal = document.getElementById('workerConfigModal');
             if (modal) modal.classList.add('hidden');
         }
 
-        function saveApiKey() {
-            const val = document.getElementById('geminiApiKeyInput').value.trim();
-            if (!val) { showToast("Please enter a valid Gemini API key.", "error"); return; }
-            geminiApiKey = val;
-            localStorage.setItem('infosys_gemini_key', val);
-            closeApiKeyModal();
-            updateEngineStatusUI();
-            showToast("Gemini API Key activated successfully!", "info");
-        }
-
-        function clearApiKey() {
-            geminiApiKey = '';
-            localStorage.removeItem('infosys_gemini_key');
-            const input = document.getElementById('geminiApiKeyInput');
-            if (input) input.value = '';
-            closeApiKeyModal();
-            updateEngineStatusUI();
-            showToast("Gemini API Key cleared.", "info");
-        }
-
-        function toggleApiKeyVisibility() {
-            const input = document.getElementById('geminiApiKeyInput');
-            const icon = document.getElementById('apiKeyEyeIcon');
-            if (input && icon) {
-                if (input.type === 'password') {
-                    input.type = 'text';
-                    icon.className = 'fa-solid fa-eye-slash';
-                } else {
-                    input.type = 'password';
-                    icon.className = 'fa-solid fa-eye';
-                }
-            }
+        function saveWorkerEndpointConfig() {
+            const val = document.getElementById('workerEndpointInput')?.value.trim();
+            if (!val) { showToast("Please enter a valid Worker Gateway URL.", "error"); return; }
+            workerGatewayEndpoint = val.replace(/\/+$/, ''); // strip trailing slash so /health and /api/ai/* concatenate cleanly
+            localStorage.setItem('infosys_worker_endpoint', workerGatewayEndpoint);
+            closeWorkerConfigModal();
+            showToast("Cloudflare Worker Gateway endpoint updated!", "info");
+            pingWorkerGateway({ silent: true });
         }
 
         function updateEngineStatusUI() {
             const badge = document.getElementById('engineBadge');
             const heroStatus = document.getElementById('heroAiStatusText');
-            if (geminiApiKey) {
-                if (badge) {
-                    badge.className = "bg-emerald-500/30 text-emerald-300 border border-emerald-400/30 text-[9px] px-1.5 py-0.2 rounded font-mono";
-                    badge.textContent = "GEMINI LIVE";
-                }
-                if (heroStatus) heroStatus.textContent = "Gemini Live";
-            } else {
-                if (badge) {
-                    badge.className = "bg-amber-500/30 text-amber-300 border border-amber-400/30 text-[9px] px-1.5 py-0.2 rounded font-mono";
-                    badge.textContent = "HYBRID AI";
-                }
-                if (heroStatus) heroStatus.textContent = "Direct API";
+            if (badge) {
+                badge.className = "bg-orange-500/30 text-orange-300 border border-orange-400/30 text-[9px] px-1.5 py-0.2 rounded font-mono";
+                badge.textContent = "CF WORKERS AI";
             }
+            if (heroStatus) heroStatus.textContent = "CF Workers AI";
+        }
+
+        // Pings the Worker's unauthenticated GET /health route (no regNo,
+        // no rate limit, no model call) so the UI can show whether the
+        // configured Worker URL is actually reachable, instead of just
+        // trusting a saved string. Used both for the silent hero-card check
+        // on load and the explicit "Test Connection" button in the modal.
+        async function pingWorkerGateway({ silent = true } = {}) {
+            const heroDot = document.getElementById('workerConnDot');
+            const heroLabel = document.getElementById('workerConnLabel');
+            const modalDot = document.getElementById('modalConnDot');
+            const modalLabel = document.getElementById('modalConnLabel');
+            const testBtn = document.getElementById('testConnBtn');
+
+            const setState = (dotClass, text) => {
+                if (heroDot) heroDot.className = `w-1.5 h-1.5 rounded-full ${dotClass}`;
+                if (heroLabel) heroLabel.textContent = text;
+                if (modalDot) modalDot.className = `w-1.5 h-1.5 rounded-full ${dotClass}`;
+                if (modalLabel) modalLabel.textContent = text;
+            };
+
+            if (!silent && testBtn) {
+                testBtn.disabled = true;
+                testBtn.innerHTML = `<div class="spin-ring spin-indigo w-3 h-3 border-2"></div> Testing&hellip;`;
+            }
+            setState('bg-amber-400 animate-pulse', 'Checking connection…');
+
+            if (!workerGatewayEndpoint) {
+                setState('bg-red-500', 'No endpoint configured');
+                if (!silent) showToast('Enter a Worker Gateway URL first.', 'error');
+            } else {
+                try {
+                    const controller = new AbortController();
+                    const timeout = setTimeout(() => controller.abort(), 6000);
+                    const res = await fetch(`${workerGatewayEndpoint}/health`, { method: 'GET', signal: controller.signal });
+                    clearTimeout(timeout);
+                    if (res.ok) {
+                        setState('bg-emerald-400', 'Connected — Worker is live');
+                        if (!silent) showToast('Worker Gateway is reachable and responding.', 'info');
+                    } else {
+                        setState('bg-red-500', `Worker responded with error (${res.status})`);
+                        if (!silent) showToast(`Worker responded with status ${res.status}.`, 'error');
+                    }
+                } catch (e) {
+                    const msg = e.name === 'AbortError' ? 'Timed out — check the URL/CORS' : 'Unreachable — check the URL/CORS';
+                    setState('bg-red-500', msg);
+                    if (!silent) showToast(`Could not reach the Worker: ${msg}`, 'error');
+                }
+            }
+
+            if (!silent && testBtn) {
+                testBtn.disabled = false;
+                testBtn.innerHTML = `<i class="fa-solid fa-satellite-dish"></i> Test Connection`;
+            }
+        }
+
+        function testWorkerConnection() {
+            pingWorkerGateway({ silent: false });
         }
 
         function toggleAiToolsDropdown(event) {
@@ -2273,27 +2324,35 @@
             }
         }
 
-        // Live Gemini API Helper Function
-        async function callGeminiApi(promptText) {
-            if (!geminiApiKey) {
-                throw new Error("NO_API_KEY");
+        // Centralized Cloudflare Worker AI Gateway dispatcher.
+        // The frontend never talks to a model provider directly or holds a
+        // privileged credential — every request is authorized server-side by
+        // the Worker, which validates schema/size, enforces rate limits,
+        // selects an approved model from its allowlist, and returns a
+        // normalized JSON payload. Candidates are identified only by their
+        // registration number (already-authenticated session state).
+        async function callAiWorker(endpoint, payload = {}) {
+            if (!currentRegNo) {
+                throw new Error("UNAUTHORIZED_CANDIDATE");
             }
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
-            const response = await fetch(url, {
+
+            const response = await fetch(`${workerGatewayEndpoint}${endpoint}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: promptText }] }]
-                })
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Candidate-RegNo': currentRegNo
+                },
+                body: JSON.stringify({ ...payload, regNo: currentRegNo })
             });
+
+            if (response.status === 429) {
+                throw new Error("Rate limit reached on the Worker Gateway. Please wait a moment and try again.");
+            }
             if (!response.ok) {
                 const errJson = await response.json().catch(() => ({}));
-                throw new Error(errJson.error?.message || "Gemini API HTTP Error " + response.status);
+                throw new Error(errJson.error || `Worker Gateway Error (HTTP ${response.status})`);
             }
-            const data = await response.json();
-            const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (!reply) throw new Error("Empty response from Gemini model.");
-            return reply;
+            return await response.json();
         }
 
         async function sendChatMessage() {
@@ -2341,22 +2400,22 @@
             }
 
             try {
-                if (geminiApiKey) {
-                    const systemPrompt = `You are InfyTrack AI Assistant for Infosys placement candidates (2026 Batch). Be concise, helpful, and clear. Candidate Question: ${userMsg}`;
-                    const replyText = await callGeminiApi(systemPrompt);
-                    const formatted = replyText.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                if (!currentRegNo) {
                     document.getElementById(loadingId)?.remove();
-                    appendMessage('ai', formatted);
-                } else {
-                    document.getElementById(loadingId)?.remove();
-                    appendMessage('ai', `I am operating in local mode. Enter your <a onclick="openApiKeyModal()" class="text-blue-600 underline font-bold cursor-pointer">Gemini API Key</a> to unlock live AI reasoning! Say <em>"Finished Q25"</em> to toggle problem states.`);
+                    appendMessage('ai', `Please <a onclick="showAuthModal()" class="text-blue-600 underline font-bold cursor-pointer">sign in with your Registration Number</a> to unlock live AI reasoning! Say <em>"Finished Q25"</em> to toggle problem states.`);
+                    return;
                 }
+                const res = await callAiWorker('/api/ai/solve', { prompt: userMsg, mode: 'chat' });
+                const replyText = res.response || res.code || res.result || "Response ready.";
+                const formatted = replyText.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                document.getElementById(loadingId)?.remove();
+                appendMessage('ai', formatted);
             } catch (err) {
                 document.getElementById(loadingId)?.remove();
-                if (err.message === "NO_API_KEY") {
-                    appendMessage('ai', `Please set your <a onclick="openApiKeyModal()" class="text-blue-600 underline font-bold cursor-pointer">Gemini API Key</a> to enable live AI responses.`);
+                if (err.message === "UNAUTHORIZED_CANDIDATE") {
+                    appendMessage('ai', `Please <a onclick="showAuthModal()" class="text-blue-600 underline font-bold cursor-pointer">sign in</a> to enable live AI responses.`);
                 } else {
-                    appendMessage('ai', `⚠️ Gemini API Error: ${escapeHtml(err.message)}`);
+                    appendMessage('ai', `⚠️ AI Gateway unavailable right now (${escapeHtml(err.message)}). Try again shortly, or say <em>"Finished Q25"</em> to update your progress locally.`);
                 }
             }
         }
@@ -2551,23 +2610,30 @@
         }
 
         async function triggerAiQuizGeneration() {
-            if (!ensureApiKey()) return;
-            showToast("Synthesizing AI Quiz via Gemini...", "info");
+            if (!ensureAiWorkerAccess()) return;
+            const btn = document.getElementById('aiQuizGenBtn');
+            const originalBtnHtml = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<div class="spin-ring spin-purple w-3 h-3 border-2"></div> Generating…`;
+            }
+            showToast("Synthesizing AI Quiz via Cloudflare Workers AI...", "info");
             try {
-                const prompt = `Generate 1 multiple choice question for Infosys DSA recruitment in valid JSON format only:
-                {"category":"DSA","question":"...","options":["...","...","...","..."],"correct":0,"explanation":"..."}`;
-                const raw = await callGeminiApi(prompt);
-                const jsonMatch = raw.match(/\{[\s\S]*\}/);
-                if (jsonMatch) {
-                    const parsed = JSON.parse(jsonMatch[0]);
+                const data = await callAiWorker('/api/ai/quiz', { domain: 'DSA' });
+                if (data && data.question) {
                     const existing = JSON.parse(localStorage.getItem('infosys_custom_quizzes') || '[]');
-                    existing.push(parsed);
+                    existing.push(data);
                     localStorage.setItem('infosys_custom_quizzes', JSON.stringify(existing));
                     initQuizie();
-                    showToast("New Gemini AI Question Added to Quizie!", "info");
+                    showToast("New Worker AI Question Added to Quizie!", "info");
                 }
             } catch (e) {
                 showToast("AI Quiz generation failed: " + e.message, "error");
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalBtnHtml;
+                }
             }
         }
 
@@ -2662,22 +2728,30 @@
         }
 
         async function triggerAiFlashcardsGeneration() {
-            if (!ensureApiKey()) return;
-            showToast("Synthesizing Flashcards via Gemini...", "info");
+            if (!ensureAiWorkerAccess()) return;
+            const btn = document.getElementById('aiFlashcardGenBtn');
+            const originalBtnHtml = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<div class="spin-ring spin-purple w-3 h-3 border-2"></div> Generating…`;
+            }
+            showToast("Synthesizing flashcard via Cloudflare Worker...", "info");
             try {
-                const prompt = `Generate 1 technical flashcard question and answer for Infosys placement in JSON format: {"topic":"OS","question":"...","answer":"..."}`;
-                const raw = await callGeminiApi(prompt);
-                const jsonMatch = raw.match(/\{[\s\S]*\}/);
-                if (jsonMatch) {
-                    const parsed = JSON.parse(jsonMatch[0]);
+                const data = await callAiWorker('/api/ai/flashcards', { topic: 'OS' });
+                if (data && data.question) {
                     const existing = JSON.parse(localStorage.getItem('infosys_custom_flashcards') || '[]');
-                    existing.push(parsed);
+                    existing.push(data);
                     localStorage.setItem('infosys_custom_flashcards', JSON.stringify(existing));
                     changeFlashcardTopic();
-                    showToast("New AI Flashcard created!", "info");
+                    showToast("New Worker AI Flashcard created!", "info");
                 }
             } catch (e) {
                 showToast("Flashcard synthesis failed: " + e.message, "error");
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalBtnHtml;
+                }
             }
         }
 
@@ -2693,6 +2767,13 @@
         function openLiveSearchModal() { document.getElementById('liveSearchModal')?.classList.remove('hidden'); }
         function closeLiveSearchModal() { document.getElementById('liveSearchModal')?.classList.add('hidden'); }
 
+        // Local, rule-based fallback so Resume Matcher still works with zero AI
+        // service — per spec, template-matching features must not require a
+        // live model call.
+        function buildLocalResumeAnalysis() {
+            return `### 📊 Local Role Compatibility Summary\n\n- **Systems Engineer (SE):** 85% Match (Foundational coding & aptitude present)\n- **Digital Specialist Engineer (DSE):** 60% Match (Add Sliding Window & Dynamic Programming projects)\n- **Specialist Programmer (SP):** 35% Match (Requires Graph & Advanced DP problem-solving)\n\n*Sign in and the Worker Gateway will provide a deeper AI scan.*`;
+        }
+
         async function triggerResumeAnalysis() {
             const text = document.getElementById('resumeInputText')?.value.trim();
             if (!text) { showToast("Please paste your resume text first.", "warning"); return; }
@@ -2702,15 +2783,16 @@
                 outArea.innerHTML = `<div class="flex items-center gap-2 text-teal-700 font-semibold"><div class="spin-ring spin-emerald w-4 h-4 border-2"></div> Analyzing role compatibility with Infosys hiring standards...</div>`;
             }
             try {
-                let analysis = "";
-                if (geminiApiKey) {
-                    analysis = await callGeminiApi(`Analyze this student resume for Infosys hiring profiles (SE: 3.6LPA, DSE: 6.25LPA, SP: 9.5-21LPA). Provide compatibility scores, missing keywords, and recommendations:\n\n${text}`);
+                let analysis;
+                if (currentRegNo) {
+                    const res = await callAiWorker('/api/ai/review', { code: `RESUME_ANALYSIS:\n${text}`, mode: 'resume' });
+                    analysis = res.review || res.result || buildLocalResumeAnalysis();
                 } else {
-                    analysis = `### 📊 Local Role Compatibility Summary\n\n- **Systems Engineer (SE):** 85% Match (Foundational coding & aptitude present)\n- **Digital Specialist Engineer (DSE):** 60% Match (Add Sliding Window & Dynamic Programming projects)\n- **Specialist Programmer (SP):** 35% Match (Requires Graph & Advanced DP problem-solving)\n\n*Configure Gemini API Key for detailed deep-scan feedback.*`;
+                    analysis = buildLocalResumeAnalysis();
                 }
                 if (outArea) outArea.innerHTML = `<div class="prose prose-slate text-xs space-y-2 font-sans">${analysis.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</div>`;
             } catch (e) {
-                if (outArea) outArea.innerHTML = `<span class="text-rose-600 font-bold">Analysis failed: ${escapeHtml(e.message)}</span>`;
+                if (outArea) outArea.innerHTML = `<div class="prose prose-slate text-xs space-y-2 font-sans">${buildLocalResumeAnalysis().replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</div>`;
             }
         }
 
@@ -2736,30 +2818,41 @@
             showToast(`Exam simulator active for ${track} Track!`, "info");
         }
 
+        // Rule-based fallback (no AI service required at all) per the
+        // preparation-planning spec requirement.
+        function buildLocalStudyPlan(track, days) {
+            return `### 📅 ${days}-Day ${track} Action Plan\n\n- **Days 1-${Math.ceil(days/3)}:** Master Arrays, Two Pointers & Hashing\n- **Days ${Math.ceil(days/3)+1}-${Math.ceil(2*days/3)}:** Dynamic Programming & Greedy Logic\n- **Days ${Math.ceil(2*days/3)+1}-${days}:** Mock Assessments & System Design Basics`;
+        }
+
         async function triggerStudyPlanGeneration() {
             const track = document.getElementById('planTrackSelect')?.value || 'DSE';
-            const days = document.getElementById('planDaysInput')?.value || 14;
+            const days = parseInt(document.getElementById('planDaysInput')?.value || '14', 10);
             const outArea = document.getElementById('studyPlanOutputArea');
             if (outArea) {
                 outArea.classList.remove('hidden');
                 outArea.innerHTML = `<div class="flex items-center gap-2 text-purple-700 font-semibold"><div class="spin-ring spin-purple w-4 h-4 border-2"></div> Generating ${days}-day targeted schedule...</div>`;
             }
             try {
-                let plan = "";
-                if (geminiApiKey) {
-                    plan = await callGeminiApi(`Create a concise ${days}-day study plan for a student targeting Infosys ${track} role. Break down days into DSA concepts, core CS topics, and problem targets.`);
+                let plan;
+                if (currentRegNo) {
+                    const res = await callAiWorker('/api/ai/solve', { prompt: `Create a concise ${days}-day study plan for a student targeting Infosys ${track} role. Break down days into DSA concepts, core CS topics, and problem targets.`, mode: 'study-plan', track, days });
+                    plan = res.plan || res.result || res.response || buildLocalStudyPlan(track, days);
                 } else {
-                    plan = `### 📅 ${days}-Day ${track} Action Plan\n\n- **Days 1-${Math.ceil(days/3)}:** Master Arrays, Two Pointers & Hashing\n- **Days ${Math.ceil(days/3)+1}-${Math.ceil(2*days/3)}:** Dynamic Programming & Greedy Logic\n- **Days ${Math.ceil(2*days/3)+1}-${days}:** Mock Assessments & System Design Basics`;
+                    plan = buildLocalStudyPlan(track, days);
                 }
                 if (outArea) outArea.innerHTML = `<div class="text-xs space-y-2 font-sans">${plan.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</div>`;
             } catch (e) {
-                if (outArea) outArea.innerHTML = `<span class="text-rose-600 font-bold">Failed: ${escapeHtml(e.message)}</span>`;
+                if (outArea) outArea.innerHTML = `<div class="text-xs space-y-2 font-sans">${buildLocalStudyPlan(track, days).replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</div>`;
             }
         }
 
         let interviewTurns = 0;
+        let interviewHistory = [];
+
         async function startNewMockInterview() {
+            if (!ensureAiWorkerAccess()) return;
             interviewTurns = 0;
+            interviewHistory = [];
             document.getElementById('interviewTurnsCount').textContent = '0';
             const track = document.getElementById('interviewTrackSelect')?.value || 'DSE';
             const focus = document.getElementById('interviewFocusSelect')?.value || 'DSA';
@@ -2772,12 +2865,14 @@
                     </div>
                 `;
             }
+            interviewHistory.push({ role: 'interviewer', text: `Welcome to your ${track} evaluation on ${focus}. Explain your approach to optimizing a sliding window problem with duplicate elements.` });
         }
 
         async function sendInterviewAnswer() {
             const input = document.getElementById('interviewInput');
             const val = input?.value.trim();
             if (!val) return;
+            if (!ensureAiWorkerAccess()) return;
             if (input) input.value = '';
 
             const chatBox = document.getElementById('interviewChatBox');
@@ -2789,30 +2884,25 @@
                 `;
                 chatBox.scrollTop = chatBox.scrollHeight;
             }
+            interviewHistory.push({ role: 'candidate', text: val });
 
             interviewTurns++;
             document.getElementById('interviewTurnsCount').textContent = interviewTurns;
 
+            const track = document.getElementById('interviewTrackSelect')?.value || 'DSE';
+            const focus = document.getElementById('interviewFocusSelect')?.value || 'DSA';
+
             try {
-                if (geminiApiKey) {
-                    const reply = await callGeminiApi(`You are an expert Senior Infosys Technical Interviewer. The candidate responded: "${val}". Provide a brief technical follow-up question or feedback.`);
-                    if (chatBox) {
-                        chatBox.innerHTML += `
-                            <div class="bg-indigo-50 border border-indigo-200 p-3.5 rounded-xl text-indigo-950 leading-relaxed text-xs my-2 font-sans">
-                                👨‍💼 <strong>Interviewer:</strong><br>${reply.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}
-                            </div>
-                        `;
-                        chatBox.scrollTop = chatBox.scrollHeight;
-                    }
-                } else {
-                    if (chatBox) {
-                        chatBox.innerHTML += `
-                            <div class="bg-indigo-50 border border-indigo-200 p-3.5 rounded-xl text-indigo-950 leading-relaxed text-xs my-2 font-sans">
-                                👨‍💼 <strong>Interviewer:</strong><br>"Good point. How would you handle the edge case where the memory limit is strictly $O(1)$?"
-                            </div>
-                        `;
-                        chatBox.scrollTop = chatBox.scrollHeight;
-                    }
+                const res = await callAiWorker('/api/ai/interview', { track, focus, history: interviewHistory });
+                const reply = res.response || res.result || `"Good point. How would you handle the edge case where the memory limit is strictly $O(1)$?"`;
+                interviewHistory.push({ role: 'interviewer', text: reply });
+                if (chatBox) {
+                    chatBox.innerHTML += `
+                        <div class="bg-indigo-50 border border-indigo-200 p-3.5 rounded-xl text-indigo-950 leading-relaxed text-xs my-2 font-sans">
+                            👨‍💼 <strong>Interviewer:</strong><br>${reply.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}
+                        </div>
+                    `;
+                    chatBox.scrollTop = chatBox.scrollHeight;
                 }
             } catch (e) {
                 showToast("Interview bot response error: " + e.message, "error");
@@ -2826,19 +2916,16 @@
         async function triggerLiveSearch() {
             const query = document.getElementById('liveSearchQueryInput')?.value.trim();
             if (!query) return;
+            if (!ensureAiWorkerAccess()) return;
             const outArea = document.getElementById('liveSearchOutputArea');
             if (outArea) {
                 outArea.classList.remove('hidden');
-                outArea.innerHTML = `<div class="flex items-center gap-2 text-emerald-700 font-semibold"><div class="spin-ring spin-emerald w-4 h-4 border-2"></div> Querying real-time drive web intel...</div>`;
+                outArea.innerHTML = `<div class="flex items-center gap-2 text-emerald-700 font-semibold"><div class="spin-ring spin-emerald w-4 h-4 border-2"></div> Querying grounded campus drive intel via Worker...</div>`;
             }
             try {
-                let res = "";
-                if (geminiApiKey) {
-                    res = await callGeminiApi(`Search synthesis for Infosys campus drive report: "${query}". Summarize key difficulty trends and topics.`);
-                } else {
-                    res = `### 🌐 Campus Intel Synthesis: "${escapeHtml(query)}"\n\n- **Recent Focus:** Dynamic Programming & Sliding Window questions.\n- **Cutoff Benchmark:** Fully solving 1 problem for SE, 2 problems for DSE.\n- **Platform:** Automated time enforcement with strict hidden test cases.`;
-                }
-                if (outArea) outArea.innerHTML = `<div class="text-xs space-y-2 font-sans">${res.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</div>`;
+                const res = await callAiWorker('/api/ai/search', { query });
+                const result = res.result || res.response || `### 🌐 Campus Intel Synthesis: "${escapeHtml(query)}"\n\n- **Recent Focus:** Dynamic Programming & Sliding Window questions.\n- **Cutoff Benchmark:** Fully solving 1 problem for SE, 2 problems for DSE.\n- **Platform:** Automated time enforcement with strict hidden test cases.`;
+                if (outArea) outArea.innerHTML = `<div class="text-xs space-y-2 font-sans">${result.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</div>`;
             } catch (e) {
                 if (outArea) outArea.innerHTML = `<span class="text-rose-600 font-bold">Search error: ${escapeHtml(e.message)}</span>`;
             }
@@ -2846,17 +2933,14 @@
 
         async function triggerAiCodeGeneration() {
             if (!currentActiveModalId) return;
+            if (!ensureAiWorkerAccess()) return;
             const q = questionsData.find(item => item.id === currentActiveModalId);
             const lang = document.getElementById('aiCodeLangSelect')?.value || 'python';
             const outArea = document.getElementById('aiCodeOutputArea');
-            if (outArea) outArea.innerHTML = `<div class="flex items-center gap-2 text-purple-300 font-mono"><div class="spin-ring spin-purple w-4 h-4 border-2"></div> Generating clean ${lang} solution via Gemini AI...</div>`;
+            if (outArea) outArea.innerHTML = `<div class="flex items-center gap-2 text-purple-300 font-mono"><div class="spin-ring spin-purple w-4 h-4 border-2"></div> Generating clean ${lang} solution via Cloudflare Workers AI...</div>`;
             try {
-                let code = "";
-                if (geminiApiKey) {
-                    code = await callGeminiApi(`Write an optimal, production-ready solution in ${lang} for this coding problem:\n\nTitle: ${q.title}\nDescription: ${q.desc}\nApproach: ${q.approach}`);
-                } else {
-                    code = `// Example ${lang.toUpperCase()} solution for ${q.title}\n// Approach: ${q.approach}\n\ndef solve():\n    # Optimal solution logic\n    pass`;
-                }
+                const res = await callAiWorker('/api/ai/solve', { lang, title: q.title, desc: q.desc, approach: q.approach });
+                const code = res.code || res.result || `// Example ${lang.toUpperCase()} solution for ${q.title}\n// Approach: ${q.approach}\n\ndef solve():\n    # Optimal solution logic\n    pass`;
                 if (outArea) outArea.innerHTML = `<pre><code>${escapeHtml(code)}</code></pre>`;
             } catch (e) {
                 if (outArea) outArea.innerHTML = `<span class="text-rose-400">Failed: ${escapeHtml(e.message)}</span>`;
@@ -2866,18 +2950,15 @@
         async function triggerAiCodeReview() {
             const code = document.getElementById('aiReviewInputCode')?.value.trim();
             if (!code) { showToast("Please paste your code to review.", "warning"); return; }
+            if (!ensureAiWorkerAccess()) return;
             const outArea = document.getElementById('aiReviewOutputArea');
             if (outArea) {
                 outArea.classList.remove('hidden');
                 outArea.innerHTML = `<div class="flex items-center gap-2 text-indigo-700 font-semibold"><div class="spin-ring spin-indigo w-4 h-4 border-2"></div> Reviewing code complexity & edge cases...</div>`;
             }
             try {
-                let review = "";
-                if (geminiApiKey) {
-                    review = await callGeminiApi(`Review this solution code for time complexity, space complexity, correctness, and potential edge-case bugs:\n\n${code}`);
-                } else {
-                    review = `### 🔍 Code Review Summary\n\n- **Time Complexity:** $O(N)$\n- **Space Complexity:** $O(1)$\n- **Status:** Syntactically clean. Check for empty input edge cases.`;
-                }
+                const res = await callAiWorker('/api/ai/review', { code });
+                const review = res.review || res.result || `### 🔍 Code Review Summary\n\n- **Time Complexity:** $O(N)$\n- **Space Complexity:** $O(1)$\n- **Status:** Syntactically clean. Check for empty input edge cases.`;
                 if (outArea) outArea.innerHTML = `<div class="text-xs space-y-2 font-sans">${review.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</div>`;
             } catch (e) {
                 if (outArea) outArea.innerHTML = `<span class="text-rose-600 font-bold">Review failed: ${escapeHtml(e.message)}</span>`;
@@ -2886,16 +2967,13 @@
 
         async function triggerAiTestCaseGeneration() {
             if (!currentActiveModalId) return;
+            if (!ensureAiWorkerAccess()) return;
             const q = questionsData.find(item => item.id === currentActiveModalId);
             const outArea = document.getElementById('aiTestCasesOutputArea');
             if (outArea) outArea.innerHTML = `<div class="flex items-center gap-2 text-amber-700 font-semibold"><div class="spin-ring spin-purple w-4 h-4 border-2"></div> Generating boundary edge cases...</div>`;
             try {
-                let cases = "";
-                if (geminiApiKey) {
-                    cases = await callGeminiApi(`Generate 3 boundary test cases (Inputs & Expected Outputs) for problem: "${q.title}" - ${q.desc}`);
-                } else {
-                    cases = `**Test Case 1 (Minimum Edge):** Input: N=1 -> Output: 1\n**Test Case 2 (Large Scale):** Input: N=10^5 -> Output: Valid\n**Test Case 3 (All Duplicates):** Input: [2,2,2,2] -> Output: Expected`;
-                }
+                const res = await callAiWorker('/api/ai/edge-cases', { title: q.title, desc: q.desc });
+                const cases = res.cases || res.result || `**Test Case 1 (Minimum Edge):** Input: N=1 -> Output: 1\n**Test Case 2 (Large Scale):** Input: N=10^5 -> Output: Valid\n**Test Case 3 (All Duplicates):** Input: [2,2,2,2] -> Output: Expected`;
                 if (outArea) outArea.innerHTML = `<div class="bg-amber-50 p-3 rounded-lg border border-amber-200 text-xs font-mono whitespace-pre-wrap">${escapeHtml(cases)}</div>`;
             } catch (e) {
                 if (outArea) outArea.innerHTML = `<span class="text-rose-600 font-bold">Generation failed: ${escapeHtml(e.message)}</span>`;
@@ -2912,13 +2990,13 @@
         window.renderQuestions = renderQuestions;
         window.updateProgressMetrics = updateProgressMetrics;
         window.showToast = showToast;
-        window.ensureApiKey = ensureApiKey;
-        window.getApiKey = getApiKey;
-        window.openApiKeyModal = openApiKeyModal;
-        window.closeApiKeyModal = closeApiKeyModal;
-        window.saveApiKey = saveApiKey;
-        window.clearApiKey = clearApiKey;
-        window.toggleApiKeyVisibility = toggleApiKeyVisibility;
+        window.ensureAiWorkerAccess = ensureAiWorkerAccess;
+        window.callAiWorker = callAiWorker;
+        window.openWorkerConfigModal = openWorkerConfigModal;
+        window.closeWorkerConfigModal = closeWorkerConfigModal;
+        window.saveWorkerEndpointConfig = saveWorkerEndpointConfig;
+        window.testWorkerConnection = testWorkerConnection;
+        window.pingWorkerGateway = pingWorkerGateway;
         window.updateEngineStatusUI = updateEngineStatusUI;
         window.toggleAiToolsDropdown = toggleAiToolsDropdown;
         window.hideAiToolsDropdown = hideAiToolsDropdown;
@@ -3012,6 +3090,7 @@
             switchCsTab('oop');
             updateEngineStatusUI();
             initRealtimeUpdatesListener();
+            pingWorkerGateway({ silent: true }); // background check, no toast — just updates the hero status dot
 
             document.getElementById('searchInput')?.addEventListener('input', applyFilters);
             document.getElementById('difficultyFilter')?.addEventListener('change', applyFilters);
