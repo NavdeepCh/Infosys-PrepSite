@@ -41,7 +41,7 @@ const RATE_LIMIT_MAX_REQUESTS = 20; // per candidate, per window
 const REG_NO_PATTERN = /^[A-Z0-9]{10}$/;
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "https://infosys-prep-site.vercel.app",
+  "Access-Control-Allow-Origin": "https://infytrack.vercel.app/",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, X-Candidate-RegNo",
 };
