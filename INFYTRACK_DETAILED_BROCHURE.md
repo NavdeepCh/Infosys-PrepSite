@@ -998,7 +998,7 @@ Example: `https://test-repo.navadeepch2005.workers.dev`
 
 ---
 
-**Document Prepared By:** Copilot AI Assistant  
+**Document Prepared By:** Navadeep Ch
 **Date:** August 20, 2026  
 **Portal Status:** Active & Production-Ready
 
