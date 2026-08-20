@@ -18,14 +18,18 @@
 // ---- Configuration -------------------------------------------------------
 
 // Allowlisted models per feature. Never accept a model name from the client.
+// NOTE: @cf/meta/llama-3-8b-instruct was retired from the Workers AI catalog
+// (Cloudflare marks it "Deprecated" as of mid-2026) — calls to it throw
+// inside env.AI.run(), which is why every feature returned a 502 "AI Gateway
+// request failed" error. Using the actively maintained fast variant instead.
 const MODEL_MAP = {
-  solve: "@cf/meta/llama-3-8b-instruct",
-  review: "@cf/meta/llama-3-8b-instruct",
-  "edge-cases": "@cf/meta/llama-3-8b-instruct",
-  quiz: "@cf/meta/llama-3-8b-instruct",
-  flashcards: "@cf/meta/llama-3-8b-instruct",
-  interview: "@cf/meta/llama-3-8b-instruct",
-  search: "@cf/meta/llama-3-8b-instruct", // swap for a grounded/search-capable model when available
+  solve: "@cf/meta/llama-3.1-8b-instruct-fast",
+  review: "@cf/meta/llama-3.1-8b-instruct-fast",
+  "edge-cases": "@cf/meta/llama-3.1-8b-instruct-fast",
+  quiz: "@cf/meta/llama-3.1-8b-instruct-fast",
+  flashcards: "@cf/meta/llama-3.1-8b-instruct-fast",
+  interview: "@cf/meta/llama-3.1-8b-instruct-fast",
+  search: "@cf/meta/llama-3.1-8b-instruct-fast", // swap for a grounded/search-capable model when available
 };
 
 const MAX_PROMPT_LENGTH = 4000;
@@ -37,7 +41,7 @@ const RATE_LIMIT_MAX_REQUESTS = 20; // per candidate, per window
 const REG_NO_PATTERN = /^[A-Z0-9]{10}$/;
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "https://test-repo-vert-five.vercel.app",
+  "Access-Control-Allow-Origin": "https://infosys-prep-site.vercel.app",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, X-Candidate-RegNo",
 };
@@ -102,14 +106,29 @@ async function runModel(env, feature, messages) {
   return (result && (result.response || result.result)) || "";
 }
 
-/** Best-effort extraction of the first {...} JSON object from model text. */
+/** Best-effort extraction of the first {...} JSON object from model text.
+ *  Different models format "JSON-only" instructions differently — some
+ *  wrap it in ```json fences, add a leading sentence, or leave a trailing
+ *  comma. This strips the common cases before falling back to a raw parse. */
 function extractJson(text) {
-  const match = (text || "").match(/\{[\s\S]*\}/);
+  let cleaned = (text || "").trim();
+  // Strip ```json ... ``` or ``` ... ``` code fences if present.
+  cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+
+  const match = cleaned.match(/\{[\s\S]*\}/);
   if (!match) return null;
+
+  let candidate = match[0];
   try {
-    return JSON.parse(match[0]);
+    return JSON.parse(candidate);
   } catch {
-    return null;
+    // Common model slip-up: trailing comma before a closing bracket/brace.
+    try {
+      const fixed = candidate.replace(/,\s*([}\]])/g, "$1");
+      return JSON.parse(fixed);
+    } catch {
+      return null;
+    }
   }
 }
 
@@ -310,9 +329,16 @@ export default {
       return jsonResponse({ ...result, requestId });
     } catch (err) {
       ctx.waitUntil(recordUsageEvent(env, { regNo, feature: url.pathname, status: "error", requestId }));
-      const message = err && err.message === "UPSTREAM_TIMEOUT"
-        ? "The AI model took too long to respond. Please try again."
-        : "AI Gateway request failed. Please try again shortly.";
+      let message = "AI Gateway request failed. Please try again shortly.";
+      if (err && err.message === "UPSTREAM_TIMEOUT") {
+        message = "The AI model took too long to respond. Please try again.";
+      } else if (err && err.message === "MODEL_OUTPUT_MALFORMED") {
+        // The model responded, but its output didn't parse as the expected
+        // JSON shape (e.g. it added prose around the JSON, or used a format
+        // this model doesn't support well). Distinct from a hard failure so
+        // it's obvious from the toast alone which case this is.
+        message = "The AI generated an unexpected response format. Please try again.";
+      }
       return errorResponse(message, 502, requestId);
     }
   },
