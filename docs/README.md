@@ -2,9 +2,8 @@
 
 This folder contains all project documentation and technical specifications.
 
-## Files
+## Contents
 
-- **INFYTRACK_DETAILED_BROCHURE.md** - Complete technical brochure with operational specifications
-- **README.md** - This file
+- **INFYTRACK_DETAILED_BROCHURE.md** - Complete technical brochure with platform specifications
 
 For the main project README, see `/README.md` in the repository root.
