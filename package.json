@@ -1,0 +1,19 @@
+{
+  "name": "infytrack",
+  "version": "1.0.0",
+  "description": "Infosys Placement Training & Coding Preparation Portal",
+  "type": "module",
+  "scripts": {
+    "build": "node build.js",
+    "dev": "python3 -m http.server 8000 || python -m http.server 8000"
+  },
+  "keywords": ["infosys", "placement", "coding", "preparation"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@vercel/analytics": "^1.1.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.19.8"
+  }
+}
